@@ -1,0 +1,26 @@
+#!/usr/bin/env ruby
+
+require_relative '../lib/planetext'
+require 'optparse'
+
+
+option_parser = OptionParser.new do |opts|
+  planetext = File.basename($0)
+  opts.banner = "Usage: #{planetext} [options] ..." # TODO
+  opts.separator ""
+  
+  opts.on( '-h', '--help', 'Display this help' ) do
+    puts opts
+    exit
+  end
+end
+
+begin
+  option_parser.parse!
+rescue OptionParser::InvalidOption => x
+  STDERR.puts "Error: #{x}"
+  exit(1)
+end
+
+
+puts "Hello, world!" # TODO

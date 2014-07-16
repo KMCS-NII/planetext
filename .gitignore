@@ -1,0 +1,30 @@
+# -*- mode: gitignore; -*-
+
+
+## Project
+/config.yaml
+/work
+/data
+
+
+## Mac OS/X
+.DS_Store
+
+
+## Linux
+.directory
+
+
+## Windows
+Desktop.ini
+
+
+## Vim
+[._]*.s[a-w][a-z]
+[._]s[a-w][a-z]
+*~
+
+
+## Emacs
+\#*\#
+.\#*
