@@ -1,2 +1,2 @@
-:webapp:
-  :session_secret: secret
+webapp:
+  session_secret: secret

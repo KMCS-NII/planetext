@@ -1,10 +1,13 @@
 source "https://rubygems.org"
 
 gem "sinatra"
-gem "emk-sinatra-url-for"
-gem "haml"
+gem "slim"
+gem "sass"
+gem "coffee-script"
 gem "nokogiri"
 gem "sinatra-flash"
+gem "rack-session-file"
+gem "settingslogic"
 
 group :development do
   gem "guard-rack"

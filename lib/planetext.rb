@@ -1,3 +1,26 @@
 require 'yaml'
+require 'settingslogic'
+require_relative 'extract'
 
-$config = File.open('config.yaml') { |f| YAML::load(f) }
+module PlaneText
+  class Config < Settingslogic
+    source "config.yaml"
+    suppress_errors true
+    load!
+  end
+
+
+  class Extractor
+    def self.extract(doc, conf={})
+      conf = {
+        remove_whitespace: false,
+        replace_newlines: ' ',
+        use_xpath: true,
+        opaque_unknowns: true,
+        newline: [],
+        mark_displacement: true
+      }.merge(conf)
+      PaperVu::Extract::Document.new(doc, conf)
+    end
+  end
+end

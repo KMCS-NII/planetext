@@ -1,0 +1,36 @@
+doctype html
+html
+  head
+    title PlaneText
+    script(src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js")
+    javascript:
+      $(function() {
+        $('.delete-dataset').click(function() {
+          var $link = $(this).closest('tr').find('a');
+          var href = $link.attr('href');
+          var name = $link.text();
+          var name2 = prompt('Please type in "' + name + '" to confirm deletion:');
+          if (name == name2) {
+            $.ajax({
+              url: href,
+              type: 'delete',
+              success: function() {
+                $link.closest('tr').remove();
+              }
+            });
+          }
+        });
+      })
+  body
+    table
+      //tr
+        td
+          input#new-dataset-name(placeholder="New dataset name")
+        td
+          input#new-dataset(type="file" value="upload")
+      - datasets.each do |dataset|
+        tr
+          td
+            a(href=url("/dataset/#{dataset}")) = dataset
+          td
+            input.delete-dataset(type="button" value="Delete")
