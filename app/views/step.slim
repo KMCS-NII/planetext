@@ -138,11 +138,11 @@ html
           $selected_li = select_li(evt)
           selected_tag = $selected_li.text()
           for attr_name, attr of unknowns[selected_tag]
-            unless attr_name == '-'
+            unless attr_name == ''
               $('<li draggable="true">').text(attr_name).appendTo($attr)
             for data in attr[1]
               str = "#{data[2]} (#{data[0]}-#{data[1]})"
-              $('<option>').text(str).appendTo($instance)
+              $('<li>').text(str).appendTo($instance)
           disable_empty()
         $attr.click ->
           $attr.find('li.selected').removeClass('selected')
@@ -182,10 +182,12 @@ html
           disable_empty()
         $value.click ->
           $value.find('li.selected').removeClass('selected')
+          $instance.empty()
           fill_instances_by_word()
           disable_empty()
         $value.on 'click', 'li', (evt) ->
           evt.stopPropagation()
+          $instance.empty()
           $selected_li = select_li(evt)
           selected_tag = $tag.find('li.selected').text()
           selected_attr = $attr.find('li.selected').text()
@@ -214,14 +216,14 @@ html
               when 39 # right
                 selects[current + 1]
               when 38 # up
-                $selected_li = $("##{evt.target.id}").find('li.selected')
+                $selected_li = $(evt.target).find('li.selected')
                 $li = $selected_li.prev()
                 if ($li.length)
                   $selected_li.removeClass('selected')
                   $li.addClass('selected')
                 selects[current]
               when 40 # down
-                $selected_li = $("##{evt.target.id}").find('li.selected')
+                $selected_li = $(evt.target).find('li.selected')
                 $li = $selected_li.next()
                 if ($li.length)
                   $selected_li.removeClass('selected')
@@ -230,15 +232,22 @@ html
           if next
             evt.stopPropagation()
             evt.preventDefault()
-            unless $selected_li # left, right
+            if $selected_li # up, down
+              if (li = $li[0])
+                ul = evt.target
+                ul_top = ul.scrollTop
+                ul_bottom = ul_top + ul.clientHeight - li.clientHeight
+                pos = li.offsetTop - ul.offsetTop
+                if pos < ul_top
+                  li.scrollIntoView(true)
+                else if pos > ul_bottom
+                  li.scrollIntoView(false)
+            else # left, right
               $ul = $("##{next}")
               return if $ul.hasClass('disabled')
               $ul.focus()
-              $li =
-                if $ul.val()
-                  $ul.find('li.selected')
-                else
-                  $ul.find('li:first-child')
+              $li = $ul.find('li.selected')
+              $li = $ul.find('li:first-child') unless $li.length
             if $li.length
               $li[0].click()
 
@@ -259,7 +268,7 @@ html
         div Word
         ul id="word" size="2" multiple="multiple" tabindex="3"
       div
-        div Whole value
+        div Value
         ul id="value" size="2" tabindex="4"
       div
         div Instance
