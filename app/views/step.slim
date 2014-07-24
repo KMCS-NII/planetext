@@ -15,6 +15,7 @@ html
         margin: 0
         box-sizing: content-box
       header
+        user-select: none
         font: bold italic $headerfontsize 'Arial'
         background-color: #000000
         color: #ffffff
@@ -26,31 +27,52 @@ html
         top: $header
       #tagged
         top: $taggedtop
-        select
+        ul
           background-color: #eeffee
+        #trash
+          background-color: #ebe0d6
       .selects
+        user-select: none
         position: absolute
         left: 0
         right: 0
         height: $selectheader + $selectheight
-        & > div
+        & > div // container
           display: inline-block
           width: 20%
           height: $selectheader + $selectheight
-          & > div
+          & > div // header
             font: bold 1em 'Arial'
             padding-left: $padding
             background-color: #444444
             color: #ffffff
             height: $selectheader
-        select
+          :first-child
+            border-right: none
+        ul
+        ul
+          margin: 0
+          padding: 0
+          list-item-marker: none
+          overflow-y: auto
           width: 100%
           height: $selectheight
           outline: none
           &:focus
             background-color: #eeeeff
-          &:disabled
+          &.disabled
             background-color: #dddddd
+          li
+            cursor: default
+            padding: 0 $padding
+            overflow-x: hidden
+            white-space: nowrap
+          li.selected
+            color: #000000
+            background-color: #d4d4d4
+          &:focus li.selected
+            color: #ffffff
+            background-color: #2a80df
       iframe
         width: 100%
     script
@@ -66,108 +88,159 @@ html
           disable_if_empty($value)
           disable_if_empty($instance)
         disable_if_empty = ($select) ->
-          empty = $select.find('option').length == 0
-          $select.prop('disabled', empty)
+          empty = $select.find('li').length == 0
+          $select.toggleClass('disabled', empty)
+        select_li = (evt) ->
+          $(evt.target).closest('ul').find('li.selected').removeClass('selected')
+          $selected_li = $(evt.target).addClass('selected')
+        fill_instances_by_word = ->
+          matching = null
+          selected_tag = $tag.find('li.selected').text()
+          selected_attr = $attr.find('li.selected').text()
+          attr = unknowns[selected_tag][selected_attr]
+          $word.find('li.selected').map ->
+            word = this.textContent
+            word_instances = attr[0][word]
+            if matching
+              for index of matching
+                delete matching[index] unless index in word_instances
+            else
+              matching = {}
+              matching[index] = true for index in word_instances
+          unique_values = {}
+          for index in Object.keys(matching)
+            data = attr[1][index]
+            str = "#{data[2]} (#{data[0]}-#{data[1]})"
+            $('<li>').text(str).appendTo($instance)
+            unique_values[attr[1][index][3]] = true;
+          unique_values
 
-        $tag = $('#tag').click (evt) ->
-          try
-            $attr.empty()
-            $word.empty()
-            $value.empty()
-            $instance.empty()
-            return if evt.target.nodeName == "SELECT"
-            selected_tag = $tag.val()
-            for attr_name, attr of unknowns[selected_tag]
-              unless attr_name == '-'
-                $('<option>').text(attr_name).appendTo($attr)
-              for data in attr[1]
-                str = "#{data[2]} (#{data[0]}-#{data[1]})"
-                $('<option>').text(str).appendTo($instance)
-          finally
-            disable_empty()
-        $attr = $('#attr').click (evt) ->
-          try
-            $word.empty()
-            $value.empty()
-            $instance.empty()
-            return if evt.target.nodeName == "SELECT"
-            selected_tag = $tag.val()
-            selected_attr = $attr.val()
-            attr = unknowns[selected_tag][selected_attr]
-            for attr_word of attr[0]
-              $('<option>').text(attr_word).appendTo($word)
-              for index in attr[0][attr_word]
-                data = attr[1][index]
-                str = "#{data[2]} (#{data[0]}-#{data[1]})"
-                $('<option>').text(str).appendTo($instance)
-          finally
-            disable_empty()
-        $word = $('#word').click (evt) ->
-          try
-            $value.empty()
-            $instance.empty()
-            return if evt.target.nodeName == "SELECT"
-            matching = null
-            selected_tag = $tag.val()
-            selected_attr = $attr.val()
-            attr = unknowns[selected_tag][selected_attr]
-            $word.find('option:selected').map ->
-              word = this.value
-              word_instances = attr[0][word]
-              if matching
-                for index of matching
-                  delete matching[index] unless index in word_instances
-              else
-                matching = {}
-                matching[index] = true for index in word_instances
-            unique_values = {}
-            for index in Object.keys(matching)
-              data = attr[1][index]
+        $tag = $('#tag')
+        $attr = $('#attr')
+        $word = $('#word')
+        $value = $('#value')
+        $instance = $('#instance')
+
+        $tag.click ->
+          $tag.find('li.selected').removeClass('selected')
+          $attr.empty()
+          $word.empty()
+          $value.empty()
+          $instance.empty()
+          disable_empty()
+        $tag.on 'click', 'li', (evt) ->
+          evt.stopPropagation()
+          $attr.empty()
+          $word.empty()
+          $value.empty()
+          $instance.empty()
+          return unless evt.target.nodeName == "LI"
+          $selected_li = select_li(evt)
+          selected_tag = $selected_li.text()
+          for attr_name, attr of unknowns[selected_tag]
+            unless attr_name == '-'
+              $('<li draggable="true">').text(attr_name).appendTo($attr)
+            for data in attr[1]
               str = "#{data[2]} (#{data[0]}-#{data[1]})"
               $('<option>').text(str).appendTo($instance)
-              unique_values[attr[1][index][3]] = true;
-            for value in Object.keys(unique_values)
-              $('<option>').text(value).appendTo($value)
-          finally
-            disable_empty()
-        $value = $('#value').click (evt) ->
-          try
-            $instance.empty()
-            return if evt.target.nodeName == "SELECT"
-            selected_tag = $tag.val()
-            selected_attr = $attr.val()
-            selected_value = $value.val()
-            attr = unknowns[selected_tag][selected_attr]
-            for data in attr[1]
-              if data[3] == selected_value
-                str = "#{data[2]} (#{data[0]}-#{data[1]})"
-                $('<option>').text(str).appendTo($instance)
-          finally
-            disable_empty()
-        $instance = $('#instance').click (evt) ->
-          return if evt.target.nodeName == "SELECT"
+          disable_empty()
+        $attr.click ->
+          $attr.find('li.selected').removeClass('selected')
+          $word.empty()
+          $value.empty()
+          $instance.empty()
+          disable_empty()
+        $attr.on 'click', 'li', (evt) ->
+          evt.stopPropagation()
+          $word.empty()
+          $value.empty()
+          $instance.empty()
+          $selected_li = select_li(evt)
+          selected_tag = $tag.find('li.selected').text()
+          selected_attr = $selected_li.text()
+          attr = unknowns[selected_tag][selected_attr]
+          for attr_word of attr[0]
+            $('<li draggable="true">').text(attr_word).appendTo($word)
+            for index in attr[0][attr_word]
+              data = attr[1][index]
+              str = "#{data[2]} (#{data[0]}-#{data[1]})"
+              $('<li>').text(str).appendTo($instance)
+          disable_empty()
+        $word.click ->
+          $word.find('li.selected').removeClass('selected')
+          $value.empty()
+          $instance.empty()
+          disable_empty()
+        $word.on 'click', 'li', (evt) ->
+          evt.stopPropagation()
+          $value.empty()
+          $instance.empty()
+          $selected_li = select_li(evt)
+          unique_values = fill_instances_by_word()
+          for value in Object.keys(unique_values)
+            $('<li>').text(value).appendTo($value)
+          disable_empty()
+        $value.click ->
+          $value.find('li.selected').removeClass('selected')
+          fill_instances_by_word()
+          disable_empty()
+        $value.on 'click', 'li', (evt) ->
+          evt.stopPropagation()
+          $selected_li = select_li(evt)
+          selected_tag = $tag.find('li.selected').text()
+          selected_attr = $attr.find('li.selected').text()
+          selected_value = $selected_li.text()
+          attr = unknowns[selected_tag][selected_attr]
+          for data in attr[1]
+            if data[3] == selected_value
+              str = "#{data[2]} (#{data[0]}-#{data[1]})"
+              $('<li>').text(str).appendTo($instance)
+          disable_empty()
+        $instance.click ->
+          $instance.find('li.selected').removeClass('selected')
+          # TODO clear the instance
+        $instance.on 'click', 'li', (evt) ->
+          evt.stopPropagation()
+          $selected_li = select_li(evt)
+          # TODO show the instance
 
-        $('select').keyup (evt) ->
+        $('#untagged ul').keydown (evt) ->
           selects = ['tag', 'attr', 'word', 'value', 'instance']
           current = selects.indexOf(evt.target.id)
           next =
             switch evt.keyCode
-              when 37
+              when 37 # left
                 selects[current - 1]
-              when 39
+              when 39 # right
                 selects[current + 1]
-              when 38, 40
+              when 38 # up
+                $selected_li = $("##{evt.target.id}").find('li.selected')
+                $li = $selected_li.prev()
+                if ($li.length)
+                  $selected_li.removeClass('selected')
+                  $li.addClass('selected')
+                selects[current]
+              when 40 # down
+                $selected_li = $("##{evt.target.id}").find('li.selected')
+                $li = $selected_li.next()
+                if ($li.length)
+                  $selected_li.removeClass('selected')
+                  $li.addClass('selected')
                 selects[current]
           if next
-            $select = $("##{next}")
-            return unless $select.find('option').length
-            $select.focus()
-            $option =
-              if $select.val()
-                $select.find('option:selected')
-              else
-                $select.find('option:first-child').prop('selected', true)
-            $option.trigger('click')
+            evt.stopPropagation()
+            evt.preventDefault()
+            unless $selected_li # left, right
+              $ul = $("##{next}")
+              return if $ul.hasClass('disabled')
+              $ul.focus()
+              $li =
+                if $ul.val()
+                  $ul.find('li.selected')
+                else
+                  $ul.find('li:first-child')
+            if $li.length
+              $li[0].click()
 
         disable_empty()
   body
@@ -176,31 +249,34 @@ html
     div.selects#untagged
       div
         div Tag
-        select id="tag" size="2"
+        ul id="tag" size="2" tabindex="1"
           - unknowns.each do |tag_name, _|
-            option draggable="true" #{tag_name}
+            li draggable="true" #{tag_name}
       div
         div Attribute
-        select id="attr" size="2"
+        ul id="attr" size="2" tabindex="2"
       div
         div Word
-        select id="word" size="2" multiple="multiple"
+        ul id="word" size="2" multiple="multiple" tabindex="3"
       div
         div Whole value
-        select id="value" size="2"
+        ul id="value" size="2" tabindex="4"
       div
         div Instance
-        select id="instance" size="2"
+        ul id="instance" size="2" tabindex="5"
     div.selects#tagged
       div
         div Independent
-        select id="independent" size="2"
+        ul id="independent" size="2"
       div
         div Decoration
-        select id="decoration" size="2"
+        ul id="decoration" size="2"
       div
         div Object
-        select id="object" size="2"
+        ul id="object" size="2"
       div
         div Metainfo
-        select id="metainfo" size="2"
+        ul id="metainfo" size="2"
+      div
+        div Trash
+        ul id="trash" size="2"
