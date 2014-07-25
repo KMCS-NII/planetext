@@ -169,12 +169,15 @@ html
           return unless evt.target.nodeName == "LI"
           $selected_li = select_li(evt)
           selected_tag = $selected_li.text()
+          known = {}
           for attr_name, attr of unknowns[selected_tag]
             unless attr_name == ''
               $('<li draggable="true">').text(attr_name).appendTo($attr)
             for data in attr[1]
               str = "#{data[2]} (#{data[0]}-#{data[1]})"
-              $('<li>').text(str).appendTo($instance)
+              unless known[str]
+                $('<li>').text(str).appendTo($instance)
+                known[str] = true
           disable_empty()
         $attr.click ->
           $attr.find('li.selected').removeClass('selected')
@@ -191,12 +194,15 @@ html
           selected_tag = $tag.find('li.selected').text()
           selected_attr = $selected_li.text()
           attr = unknowns[selected_tag][selected_attr]
+          known = {}
           for attr_word of attr[0]
             $('<li draggable="true">').text(attr_word).appendTo($word)
             for index in attr[0][attr_word]
               data = attr[1][index]
               str = "#{data[2]} (#{data[0]}-#{data[1]})"
-              $('<li>').text(str).appendTo($instance)
+              unless known[str]
+                $('<li>').text(str).appendTo($instance)
+                known[str] = true
           disable_empty()
         $word.click ->
           $word.find('li.selected').removeClass('selected')
@@ -225,10 +231,13 @@ html
           selected_attr = $attr.find('li.selected').text()
           selected_value = $selected_li.text()
           attr = unknowns[selected_tag][selected_attr]
+          known = {}
           for data in attr[1]
             if data[3] == selected_value
               str = "#{data[2]} (#{data[0]}-#{data[1]})"
-              $('<li>').text(str).appendTo($instance)
+              unless known[str]
+                $('<li>').text(str).appendTo($instance)
+                known[str] = true
           disable_empty()
         $instance.click ->
           $instance.find('li.selected').removeClass('selected')
