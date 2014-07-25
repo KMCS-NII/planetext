@@ -310,15 +310,23 @@ html
       div
         div Independent
         ul id="independent" size="2"
+          - selectors[:independent].each do |selector|
+            li =selector
       div
         div Decoration
         ul id="decoration" size="2"
+          - selectors[:decoration].each do |selector|
+            li =selector
       div
         div Object
         ul id="object" size="2"
+          - selectors[:object].each do |selector|
+            li =selector
       div
         div Metainfo
         ul id="metainfo" size="2"
+          - selectors[:metainfo].each do |selector|
+            li =selector
       div
         div Trash
         ul id="trash" size="2"
