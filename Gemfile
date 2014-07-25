@@ -1,12 +1,12 @@
 source "https://rubygems.org"
 
+gem "rack"
 gem "sinatra"
 gem "slim"
 gem "sass"
 gem "coffee-script"
 gem "nokogiri"
 gem "sinatra-flash"
-gem "rack-session-file"
 gem "settingslogic"
 
 group :development do

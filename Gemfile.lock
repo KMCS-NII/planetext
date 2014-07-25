@@ -43,8 +43,6 @@ GEM
     rack (1.5.2)
     rack-protection (1.5.3)
       rack
-    rack-session-file (0.5.0)
-      rack (>= 1.1.0)
     rb-fchange (0.0.6)
       ffi
     rb-fsevent (0.9.4)
@@ -76,7 +74,7 @@ DEPENDENCIES
   coffee-script
   guard-rack
   nokogiri
-  rack-session-file
+  rack
   rb-fchange
   rb-fsevent
   rb-inotify (~> 0.8.8)
