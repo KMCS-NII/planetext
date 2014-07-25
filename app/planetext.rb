@@ -9,7 +9,18 @@ require 'fileutils'
 require 'set'
 
 module PlaneText
+  module HashRefinement
+    refine Hash do
+      def hmap
+        Hash[self.map {|k, v| yield k, v }]
+      end
+    end
+  end
+
+
   class App < Sinatra::Application
+    using HashRefinement
+
     set :haml, format: :html5
     set :method_override, true
     set :views, File.join(settings.root, 'app/views')
