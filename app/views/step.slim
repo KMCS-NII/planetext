@@ -41,9 +41,10 @@ html
         margin: 0
         box-sizing: content-box
         user-select: none
+        font-family: sans-serif
       header
         @include header()
-        font: bold italic $headerfontsize 'Arial'
+        font: bold italic $headerfontsize sans-serif
         width: 100%
         height: $header
         & > div
@@ -59,7 +60,7 @@ html
       .leftheader
         @include vertical($selecttotalheight, $selectleftheaderheight)
         @include header()
-        font: bold italic 15px 'Arial'
+        font: bold italic 15px sans-serif
       .selects
         user-select: none
         position: absolute
@@ -71,7 +72,7 @@ html
           width: 20%
           height: $selecttotalheight
           & > div // header
-            font: bold 1em 'Arial'
+            font: bold 1em sans-serif
             padding: $selectheadertbpad $selectheaderrlpad
             background-color: #444444
             color: #ffffff
