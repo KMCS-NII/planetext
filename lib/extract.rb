@@ -57,7 +57,6 @@ module PaperVu
         @document = Nokogiri::XML(str, nil, 'UTF-8')
         if @opts[:use_xpath]
           @namespaces = @document.collect_namespaces
-          @namespaces['xmlns:default'] = @namespaces['xmlns']
         else
           @document.remove_namespaces!
           @namespaces = nil

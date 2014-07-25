@@ -9,7 +9,18 @@ require 'fileutils'
 require 'set'
 
 module PlaneText
+  module HashRefinement
+    refine Hash do
+      def hmap
+        Hash[self.map {|k, v| yield k, v }]
+      end
+    end
+  end
+
+
   class App < Sinatra::Application
+    using HashRefinement
+
     set :haml, format: :html5
     set :method_override, true
     set :views, File.join(settings.root, 'app/views')
@@ -129,6 +140,20 @@ module PlaneText
       }
     end
 
+    def to_xpath(selectors)
+      selectors.map { |tag, attr, *values|
+        xpath = "//#{tag}"
+        if !values.empty?
+          values.each do |value|
+            xpath += "[contains(concat(' ', normalize-space(@#{attr}), ' '), ' #{value} ')]"
+          end
+        elsif attr
+          xpath += "[@#{attr}]"
+        end
+        xpath
+      }
+    end
+
     get '/dataset/:dataset' do |dataset|
       dataset_dir = get_dataset_dir(dataset)
       progress_file = get_progress_file(dataset, session[:session_id])
@@ -138,21 +163,22 @@ module PlaneText
       unknown_standoffs = []
       processed_files = progress_data[:processed_files]
       all_files = Dir.chdir(dataset_dir) { |dir|
-        Dir['**/*.{xml,xhtml}']
+        Dir['**/*.{xml,xhtml,html}']
       }
       unprocessed_files = all_files - processed_files
       limit = Config.webapp.files_at_once || 1
       unprocessed_files = unprocessed_files.take(limit) if limit > 0
+      selectors = {
+        displaced: to_xpath(progress_data[:tags][:independent]),
+        ignored: to_xpath(progress_data[:tags][:decoration]),
+        replaced: to_xpath(progress_data[:tags][:object]),
+        removed: to_xpath(progress_data[:tags][:metainfo])
+      }
       unprocessed_files.each do |xml_file_name|
         xml_file = File.absolute_path(xml_file_name, dataset_dir)
         xml = File.read(xml_file)
-        doc = Extractor.extract(xml, {
-          file_name: xml_file_name,
-          displaced: progress_data[:tags][:independent],
-          ignored: progress_data[:tags][:decoration],
-          replaced: progress_data[:tags][:object],
-          removed: progress_data[:tags][:metainfo]
-        })
+        opts = { file_name: xml_file_name }.merge(selectors)
+        doc = Extractor.extract(xml, opts)
         unknown_standoffs += doc.unknown_standoffs
         processed_files << xml_file_name if doc.unknown_standoffs.empty?
       end
@@ -167,7 +193,8 @@ module PlaneText
       else
         slim :step, {
           locals: {
-            unknowns: unknown_tree(unknown_standoffs)
+            unknowns: unknown_tree(unknown_standoffs),
+            selectors: progress_data[:tags]
           }
         }
       end
