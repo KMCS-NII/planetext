@@ -8,42 +8,71 @@ html
       $header: 35px
       $headerfontsize: 30px
       $padding: 3px
-      $selectheader: 20px
+      $selectheader: 18px
+      $selectheadertbpad: 3px
+      $selectheaderrlpad: 2px
       $selectheight: 100px
-      $taggedtop: $header + $selectheader + $selectheight
+      $selectleftheaderheight: 25px
+
+      $selecttotalheight: $selectheader + $selectheight + 2 * $selectheadertbpad
+      $taggedtop: $header + $selecttotalheight
+
+      @mixin vertical($width, $height)
+        $lrpad: 4px
+        $tbpad: 2px
+        $transx: -($width - $height) / 2
+        $transy: ($width - $height) / 2
+        -moz-transform: translate($transx, $transy) rotate(-90deg)
+        -o-transform: translate($transx, $transy) rotate(-90deg)
+        -webkit-transform: translate($transx, $transy) rotate(-90deg)
+        // TODO IE
+        // filter:  progid:DXImageTransform.Microsoft.BasicImage(rotation=0.083)
+        // -ms-filter: "progid:DXImageTransform.Microsoft.BasicImage(rotation=0.083)"
+        width: $width - $lrpad * 2
+        height: $height - $tbpad * 2
+        position: absolute
+        text-align: right
+        padding: $tbpad $lrpad
+      @mixin header()
+        background-color: #000000
+        color: #ffffff
+
       html, body
         margin: 0
         box-sizing: content-box
-      header
         user-select: none
+      header
+        @include header()
         font: bold italic $headerfontsize 'Arial'
-        background-color: #000000
-        color: #ffffff
         width: 100%
         height: $header
         & > div
           padding-left: $padding
-      #untagged
+      .untagged
         top: $header
-      #tagged
+      .tagged
         top: $taggedtop
         ul
           background-color: #eeffee
         #trash
           background-color: #ebe0d6
+      .leftheader
+        @include vertical($selecttotalheight, $selectleftheaderheight)
+        @include header()
+        font: bold italic 15px 'Arial'
       .selects
         user-select: none
         position: absolute
-        left: 0
+        left: $selectleftheaderheight
         right: 0
-        height: $selectheader + $selectheight
-        & > div // container
+        height: $selecttotalheight
+        & > div
           display: inline-block
           width: 20%
-          height: $selectheader + $selectheight
+          height: $selecttotalheight
           & > div // header
             font: bold 1em 'Arial'
-            padding-left: $padding
+            padding: $selectheadertbpad $selectheaderrlpad
             background-color: #444444
             color: #ffffff
             height: $selectheader
@@ -206,7 +235,7 @@ html
           $selected_li = select_li(evt)
           # TODO show the instance
 
-        $('#untagged ul').keydown (evt) ->
+        $('.untagged ul').keydown (evt) ->
           selects = ['tag', 'attr', 'word', 'value', 'instance']
           current = selects.indexOf(evt.target.id)
           next =
@@ -255,7 +284,8 @@ html
   body
     header
       div PlaneText
-    div.selects#untagged
+    div.leftheader.untagged Unknown Tags
+    div.selects.untagged
       div
         div Tag
         ul id="tag" size="2" tabindex="1"
@@ -273,7 +303,8 @@ html
       div
         div Instance
         ul id="instance" size="2" tabindex="5"
-    div.selects#tagged
+    div.leftheader.tagged Classified Tags
+    div.selects.tagged
       div
         div Independent
         ul id="independent" size="2"
