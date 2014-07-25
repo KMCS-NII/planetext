@@ -79,7 +79,6 @@ html
           :first-child
             border-right: none
         ul
-        ul
           margin: 0
           padding: 0
           list-item-marker: none
@@ -107,6 +106,9 @@ html
     script
       ' var unknowns =
       == JSON.dump(unknowns)
+      | ;
+      ' var selectors =
+      == JSON.dump(selectors)
       | ;
     coffee:
       $ ->
