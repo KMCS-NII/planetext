@@ -111,13 +111,17 @@ module PlaneText
         unknown_standoffs.each do |standoff|
           unknowns[standoff.name] ||= {}
           if standoff.attributes.empty?
-            attr, index = *insert_standoff_data(unknowns, standoff, '-')
+            attr, index = *insert_standoff_data(unknowns, standoff, '')
           else
             standoff.attributes.each do |name, values|
               attr, index = *insert_standoff_data(unknowns, standoff, name)
               words = values.split(/\s+/)
-              words.each do |word|
-                (attr[0][word] ||= []) << index
+              if words.empty?
+                (attr[0][''] ||= []) << index
+              else
+                words.each do |word|
+                  (attr[0][word] ||= []) << index
+                end
               end
             end
           end
