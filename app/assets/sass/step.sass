@@ -1,0 +1,99 @@
+$header: 35px
+$headerfontsize: 30px
+$padding: 3px
+$selectheader: 18px
+$selectheadertbpad: 3px
+$selectheaderrlpad: 2px
+$selectheight: 150px
+$selectleftheaderheight: 25px
+
+$selecttotalheight: $selectheader + $selectheight + 2 * $selectheadertbpad
+$taggedtop: $header + $selecttotalheight
+
+@mixin vertical($width, $height)
+  $lrpad: 4px
+  $tbpad: 2px
+  $transx: -($width - $height) / 2
+  $transy: ($width - $height) / 2
+  -moz-transform: translate($transx, $transy) rotate(-90deg)
+  -o-transform: translate($transx, $transy) rotate(-90deg)
+  -webkit-transform: translate($transx, $transy) rotate(-90deg)
+  // TODO IE
+  // filter:  progid:DXImageTransform.Microsoft.BasicImage(rotation=0.083)
+  // -ms-filter: "progid:DXImageTransform.Microsoft.BasicImage(rotation=0.083)"
+  width: $width - $lrpad * 2
+  height: $height - $tbpad * 2
+  position: absolute
+  text-align: right
+  padding: $tbpad $lrpad
+@mixin header()
+  background-color: #000000
+  color: #ffffff
+
+html, body
+  margin: 0
+  box-sizing: content-box
+  font-family: sans-serif
+header
+  @include header()
+  font: bold italic $headerfontsize sans-serif
+  width: 100%
+  height: $header
+  & > div
+    padding-left: $padding
+.untagged
+  top: $header
+.tagged
+  top: $taggedtop
+  ul
+    background-color: #eeffee
+  #trash
+    background-color: #ebe0d6
+.leftheader
+  @include vertical($selecttotalheight, $selectleftheaderheight)
+  @include header()
+  font: bold italic 15px sans-serif
+.selects
+  position: absolute
+  left: $selectleftheaderheight
+  right: 0
+  height: $selecttotalheight
+  & > div
+    float: left
+    width: 20%
+    height: $selecttotalheight
+    & > div // header
+      font: bold 1em sans-serif
+      padding: $selectheadertbpad $selectheaderrlpad
+      background-color: #444444
+      color: #ffffff
+      height: $selectheader
+  ul
+    margin: 0
+    padding: 0
+    list-item-marker: none
+    overflow-y: auto
+    width: 100%
+    height: $selectheight
+    outline: none
+    &:focus
+      background-color: #eeeeff
+    &.disabled
+      background-color: #dddddd
+    li
+      cursor: default
+      padding: 0 $padding
+      overflow-x: hidden
+      white-space: nowrap
+      list-style-type: none
+    li[draggable]
+      cursor: move
+    li.selected
+      color: #000000
+      background-color: #d4d4d4
+    &:focus li.selected
+      color: #ffffff
+      background-color: #2a80df
+iframe
+  width: 100%
+
