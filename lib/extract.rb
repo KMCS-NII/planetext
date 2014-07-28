@@ -194,8 +194,11 @@ module PaperVu
             end
 
             attributes = node.attributes.inject({}) { |h, t| h[t[0]] = t[1].to_s; h }
+            namespaced_name = node.namespace ?
+              "#{node.namespace.prefix || 'xmlns'}:#{node.name}" :
+              node.name
             @unknown_standoffs[node] =
-                Standoff.new(@unknown_standoffs[node], @offset, node.name, attributes, @opts[:file_name], displacement_name)
+                Standoff.new(@unknown_standoffs[node], @offset, namespaced_name, attributes, @opts[:file_name], displacement_name)
           end
         end
       end

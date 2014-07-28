@@ -191,10 +191,22 @@ module PlaneText
           }
         }
       else
+        selectors = progress_data[:tags].hmap { |type, selector_list|
+          selector_texts = selector_list.map { |tag, attr, *values|
+            if !values.empty?
+              "#{tag}[#{attr}: #{values.join(' ')}]"
+            elsif attr
+              "#{tag}[#{attr}]"
+            else
+              "#{tag}"
+            end
+          }
+          [type, selector_texts]
+        }
         slim :step, {
           locals: {
             unknowns: unknown_tree(unknown_standoffs),
-            selectors: progress_data[:tags]
+            selectors: selectors
           }
         }
       end
