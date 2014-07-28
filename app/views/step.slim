@@ -11,7 +11,7 @@ html
       $selectheader: 18px
       $selectheadertbpad: 3px
       $selectheaderrlpad: 2px
-      $selectheight: 100px
+      $selectheight: 150px
       $selectleftheaderheight: 25px
 
       $selecttotalheight: $selectheader + $selectheight + 2 * $selectheadertbpad
@@ -40,7 +40,6 @@ html
       html, body
         margin: 0
         box-sizing: content-box
-        user-select: none
         font-family: sans-serif
       header
         @include header()
@@ -62,13 +61,12 @@ html
         @include header()
         font: bold italic 15px sans-serif
       .selects
-        user-select: none
         position: absolute
         left: $selectleftheaderheight
         right: 0
         height: $selecttotalheight
         & > div
-          display: inline-block
+          float: left
           width: 20%
           height: $selecttotalheight
           & > div // header
@@ -77,8 +75,6 @@ html
             background-color: #444444
             color: #ffffff
             height: $selectheader
-          :first-child
-            border-right: none
         ul
           margin: 0
           padding: 0
@@ -96,6 +92,9 @@ html
             padding: 0 $padding
             overflow-x: hidden
             white-space: nowrap
+            list-style-type: none
+          li[draggable]
+            cursor: move
           li.selected
             color: #000000
             background-color: #d4d4d4
@@ -292,6 +291,31 @@ html
             if $li.length
               $li[0].click()
 
+        get_selector = ->
+          selected_tag = $tag.find('li.selected').text()
+          selected_attr = $attr.find('li.selected').text()
+          selected_words = $word.find('li.selected').map(-> $(this).text())
+          if selected_words.length
+            console.log(selected_words)
+            "#{selected_tag}[#{selected_attr}: #{selected_words.get().join(' ')}]"
+          else if selected_attr
+            "#{selected_tag}[#{selected_attr}]"
+          else
+            selected_tag
+
+        dragged_element_original_text = null
+        $('.untagged').on 'dragstart', 'li', (evt) ->
+          evt.target.click()
+          $dragged = $(evt.target)
+          dragged_element_original_text = $dragged.text()
+          selector = get_selector()
+          $dragged.text(selector)
+        $('.untagged').on 'drag', 'li', (evt) ->
+          if dragged_element_original_text
+            $dragged = $(evt.target)
+            $dragged.text(dragged_element_original_text)
+            dragged_element_original_text = null
+
         disable_empty()
   body
     header
@@ -300,43 +324,43 @@ html
     div.selects.untagged
       div
         div Tag
-        ul id="tag" size="2" tabindex="1"
+        ul id="tag" tabindex="1"
           - unknowns.each do |tag_name, _|
             li draggable="true" #{tag_name}
       div
         div Attribute
-        ul id="attr" size="2" tabindex="2"
+        ul id="attr" tabindex="2"
       div
         div Word
-        ul id="word" size="2" multiple="multiple" tabindex="3"
+        ul id="word" multiple="multiple" tabindex="3"
       div
         div Value
-        ul id="value" size="2" tabindex="4"
+        ul id="value" tabindex="4"
       div
         div Instance
-        ul id="instance" size="2" tabindex="5"
+        ul id="instance" tabindex="5"
     div.leftheader.tagged Classified Tags
     div.selects.tagged
       div
         div Independent
-        ul id="independent" size="2"
+        ul id="independent"
           - selectors[:independent].each do |selector|
             li =selector
       div
         div Decoration
-        ul id="decoration" size="2"
+        ul id="decoration"
           - selectors[:decoration].each do |selector|
             li =selector
       div
         div Object
-        ul id="object" size="2"
+        ul id="object"
           - selectors[:object].each do |selector|
             li =selector
       div
         div Metainfo
-        ul id="metainfo" size="2"
+        ul id="metainfo"
           - selectors[:metainfo].each do |selector|
             li =selector
       div
         div Trash
-        ul id="trash" size="2"
+        ul id="trash"
