@@ -23,6 +23,9 @@ module PlaneText
 
     set :haml, format: :html5
     set :method_override, true
+    set :static, true
+    set :public_folder, File.join(settings.root, 'app/public')
+    puts settings.public_folder
     set :views, File.join(settings.root, 'app/views')
     enable :sessions
     set :session_secret, Config.webapp.session_secret

@@ -6,6 +6,7 @@
 /work
 /data
 /sessions
+/.sass-cache
 
 ## Mac OS/X
 .DS_Store
