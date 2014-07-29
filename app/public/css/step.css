@@ -32,7 +32,7 @@ header > div {
   background-color: #eeffee;
 }
 /* line 50, ../../assets/sass/step.sass */
-.tagged #trash {
+.tagged #options {
   background-color: #ebe0d6;
 }
 
@@ -52,19 +52,24 @@ header > div {
 }
 
 /* line 56, ../../assets/sass/step.sass */
+.inserted {
+  background-color: #bbbbbb;
+}
+
+/* line 58, ../../assets/sass/step.sass */
 .selects {
   position: absolute;
   left: 25px;
   right: 0;
   height: 174px;
 }
-/* line 61, ../../assets/sass/step.sass */
+/* line 63, ../../assets/sass/step.sass */
 .selects > div {
   float: left;
   width: 20%;
   height: 174px;
 }
-/* line 65, ../../assets/sass/step.sass */
+/* line 67, ../../assets/sass/step.sass */
 .selects > div > div {
   font: bold 1em sans-serif;
   padding: 3px 2px;
@@ -72,9 +77,10 @@ header > div {
   color: white;
   height: 18px;
 }
-/* line 71, ../../assets/sass/step.sass */
+/* line 73, ../../assets/sass/step.sass */
 .selects ul {
-  margin: 0;
+  margin: -1px;
+  border: 1px solid #999999;
   padding: 0;
   list-item-marker: none;
   overflow-y: auto;
@@ -82,15 +88,15 @@ header > div {
   height: 150px;
   outline: none;
 }
-/* line 79, ../../assets/sass/step.sass */
+/* line 82, ../../assets/sass/step.sass */
+.selects ul.droppable {
+  background-color: #ffff33 !important;
+}
+/* line 84, ../../assets/sass/step.sass */
 .selects ul:focus {
   background-color: #eeeeff;
 }
-/* line 81, ../../assets/sass/step.sass */
-.selects ul.disabled {
-  background-color: #dddddd;
-}
-/* line 83, ../../assets/sass/step.sass */
+/* line 86, ../../assets/sass/step.sass */
 .selects ul li {
   cursor: default;
   padding: 0 3px;
@@ -98,22 +104,27 @@ header > div {
   white-space: nowrap;
   list-style-type: none;
 }
-/* line 89, ../../assets/sass/step.sass */
+/* line 92, ../../assets/sass/step.sass */
 .selects ul li[draggable] {
   cursor: move;
 }
-/* line 91, ../../assets/sass/step.sass */
+/* line 94, ../../assets/sass/step.sass */
 .selects ul li.selected {
   color: black;
   background-color: #d4d4d4;
 }
-/* line 94, ../../assets/sass/step.sass */
+/* line 97, ../../assets/sass/step.sass */
 .selects ul:focus li.selected {
   color: white;
   background-color: #2a80df;
 }
 
-/* line 97, ../../assets/sass/step.sass */
+/* line 100, ../../assets/sass/step.sass */
+.untagged ul:empty {
+  background-color: #dddddd;
+}
+
+/* line 102, ../../assets/sass/step.sass */
 iframe {
   width: 100%;
 }

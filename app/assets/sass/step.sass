@@ -47,12 +47,14 @@ header
   top: $taggedtop
   ul
     background-color: #eeffee
-  #trash
+  #options
     background-color: #ebe0d6
 .leftheader
   @include vertical($selecttotalheight, $selectleftheaderheight)
   @include header()
   font: bold italic 15px sans-serif
+.inserted
+  background-color: #bbbbbb
 .selects
   position: absolute
   left: $selectleftheaderheight
@@ -69,17 +71,18 @@ header
       color: #ffffff
       height: $selectheader
   ul
-    margin: 0
+    margin: -1px
+    border: 1px solid #999999
     padding: 0
     list-item-marker: none
     overflow-y: auto
     width: 100%
     height: $selectheight
     outline: none
+    &.droppable
+      background-color: #ffff33 !important
     &:focus
       background-color: #eeeeff
-    &.disabled
-      background-color: #dddddd
     li
       cursor: default
       padding: 0 $padding
@@ -94,6 +97,8 @@ header
     &:focus li.selected
       color: #ffffff
       background-color: #2a80df
+.untagged ul:empty
+  background-color: #dddddd
 iframe
   width: 100%
 

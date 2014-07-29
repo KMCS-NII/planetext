@@ -11,6 +11,9 @@ html
       ' var selectors =
       == JSON.dump(selectors)
       | ;
+      ' var dataset_url =
+      == JSON.dump(dataset_url)
+      | ;
     script src=url('js/step.js')
     link rel="stylesheet" href=url('css/step.css')
   body
@@ -39,24 +42,24 @@ html
     div.selects.tagged
       div
         div Independent
-        ul id="independent"
+        ul id="independent" tabindex="6"
           - selectors[:independent].each do |selector|
-            li =selector
+            li draggable="true" =selector
       div
         div Decoration
-        ul id="decoration"
+        ul id="decoration" tabindex="7"
           - selectors[:decoration].each do |selector|
-            li =selector
+            li draggable="true" =selector
       div
         div Object
-        ul id="object"
+        ul id="object" tabindex="8"
           - selectors[:object].each do |selector|
-            li =selector
+            li draggable="true" =selector
       div
         div Metainfo
-        ul id="metainfo"
+        ul id="metainfo" tabindex="9"
           - selectors[:metainfo].each do |selector|
             li =selector
       div
-        div Trash
-        ul id="trash"
+        div Options
+        ul id="options"
