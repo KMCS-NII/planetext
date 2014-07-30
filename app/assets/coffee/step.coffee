@@ -10,6 +10,9 @@ $ ->
   $selects = $('.selects')
 
   fill_instances_by_word = ->
+    # TODO FIXME multiple words don't work well, e.g.
+    # "xmlns:h1[class: title document-title]"
+    # gives no results
     matching = null
     selected_tag = $tag.find('li.selected').text()
     selected_attr = $attr.find('li.selected').text()
@@ -38,13 +41,17 @@ $ ->
     $li.addClass('selected')
   $selects.on 'customselect', '.multiselect', (evt, params) ->
     $li = $(params.li)
-    if !params.ctrl
-      $li.closest('ul').find('li.selected').removeClass('selected')
-    selected = $li.hasClass('selected')
-    if !selected
-      $li.addClass('selected')
-    else if params.ctrl
-      $li.removeClass('selected')
+    $ul = $li.closest('ul')
+    unless params.noselect
+      $ul.find('li.selectcursor').removeClass('selectcursor')
+      $li.addClass('selectcursor')
+      if !params.ctrl
+        $li.closest('ul').find('li.selected').removeClass('selected')
+      selected = $li.hasClass('selected')
+      if !selected
+        $li.addClass('selected')
+      else if params.ctrl
+        $li.removeClass('selected')
 
   $selects.on 'click', '.uniselect, .multiselect', (evt) ->
     evt.stopPropagation()
@@ -134,44 +141,83 @@ $ ->
     'metainfo'
   ]
   num_selects = selects.length
-  $('.selects ul').keydown (evt) ->
-    current = selects.indexOf(evt.target.id)
+  $('.selects ul').on 'keydown', (evt) ->
+    $this = $(this)
     next =
       switch evt.keyCode
         when 37 # left
-          selects[(current + num_selects - 1) % num_selects]
+          $this.trigger('movehorizontally', -1)
+          # XXX selects[(current + num_selects - 1) % num_selects]
         when 39 # right
-          selects[(current + 1) % num_selects]
+          $this.trigger('movehorizontally', +1)
+          # XXX selects[(current + 1) % num_selects]
         when 38 # up
-          $selected_li = $(evt.target).find('li.selected')
-          $li = $selected_li.prev()
-          selects[current]
+          $this.trigger('movevertically', -1)
+          # XXX $selected_li = $(evt.target).find('li.selected')
+          # XXX $li = $selected_li.prev()
+          # XXX selects[current]
         when 40 # down
-          $selected_li = $(evt.target).find('li.selected')
-          $li = $selected_li.next()
-          selects[current]
-    if next
+          $this.trigger('movevertically', +1)
+          # XXX $selected_li = $(evt.target).find('li.selected')
+          # XXX $li = $selected_li.next()
+          # XXX selects[current]
+        when 32
+          $this.trigger('togglecurrent')
+        else
+          pass_through = true
+    unless pass_through
       evt.stopPropagation()
       evt.preventDefault()
-      if $selected_li # up, down
-        if (li = $li[0])
-          $selected_li.removeClass('selected')
-          $li.addClass('selected')
-          ul = evt.target
-          ul_top = ul.scrollTop
-          ul_bottom = ul_top + ul.clientHeight - li.clientHeight
-          pos = li.offsetTop - ul.offsetTop
-          if pos < ul_top
-            li.scrollIntoView(true)
-          else if pos > ul_bottom
-            li.scrollIntoView(false)
-      else # left, right
-        $ul = $("##{next}")
-        $ul.focus()
-        $li = $ul.find('li.selected')
-        $li = $ul.find('li:first-child') unless $li.length
-      if $li.length
-        $li[0].click()
+
+  move_vertically = ($ul, dir, klass) ->
+    $li = $()
+    $li = $ul.find('li.selectcursor') if klass == 'selectcursor'
+    $li = $ul.find('li.selected').first() unless $li.length
+    $li = $ul.find('li:first-child') unless $li.length
+    $next_li =
+      if dir == +1
+        $li.next()
+      else if dir == -1
+        $li.prev()
+      else
+        $li
+    if $next_li.length
+      $li.removeClass(klass)
+      $next_li.addClass(klass)
+      $ul.trigger('update')
+      scroll_into_view($next_li)
+
+  scroll_into_view = ($li) ->
+    ul = $li.closest('ul')[0]
+    li = $li[0]
+    ul_top = ul.scrollTop
+    ul_bottom = ul_top + ul.clientHeight - li.clientHeight
+    pos = li.offsetTop - ul.offsetTop
+    if pos < ul_top
+      li.scrollIntoView(true)
+    else if pos > ul_bottom
+      li.scrollIntoView(false)
+
+  $selects.on 'movevertically', '.uniselect', (evt, dir) ->
+    move_vertically($(this), dir, 'selected')
+  $selects.on 'movevertically', '.multiselect', (evt, dir) ->
+    move_vertically($(this), dir, 'selectcursor')
+
+  $selects.on 'movehorizontally', 'ul', (evt, dir) ->
+    current_index = selects.indexOf($(this).prop('id'))
+    next_id = selects[(current_index + num_selects + dir) % num_selects]
+    $next_ul = $("##{next_id}")
+    $next_ul.focus()
+    #if $next_ul.hasClass('uniselect')
+      #unless $next_ul.find('li.selected').length
+        #$next_ul.find('li:first-child').addClass('selected')
+    $next_ul.trigger('movevertically', 0)
+    $next_ul.trigger('update')
+
+  $selects.on 'togglecurrent', '.multiselect', (evt, dir) ->
+    $ul = $(this)
+    $li = $ul.find('li.selectcursor')
+    $li.toggleClass('selected')
 
   get_selector = ->
     selected_tag = $tag.find('li.selected').text()
@@ -207,8 +253,11 @@ $ ->
     $('#independent, #decoration, #object, #metainfo').addClass('droppable')
     drop_ok = false
     original_column = null
-    evt.target.click()
     $dragged = $(evt.target)
+    noselect = $dragged.hasClass('selected')
+    $ul = $dragged.closest('ul')
+    $ul.trigger('customselect', { li: $dragged, noselect: noselect })
+    $ul.trigger('update')
     dragged_element_original_text = $dragged.text()
     dragged_selector = get_selector()
     $dragged.text(dragged_selector)

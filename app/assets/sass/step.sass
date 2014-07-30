@@ -94,7 +94,13 @@ header
     li.selected
       color: #000000
       background-color: #d4d4d4
-    &:focus li.selected
+    &.uniselect:focus li.selected
+      color: #ffffff
+      background-color: #2a80df
+    &.multiselect:focus li.selected
+      color: #ffffff
+      background-color: #95c0ef
+    &.multiselect:focus li.selectcursor
       color: #ffffff
       background-color: #2a80df
 .untagged ul:empty

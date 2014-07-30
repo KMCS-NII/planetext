@@ -114,17 +114,27 @@ header > div {
   background-color: #d4d4d4;
 }
 /* line 97, ../../assets/sass/step.sass */
-.selects ul:focus li.selected {
+.selects ul.uniselect:focus li.selected {
+  color: white;
+  background-color: #2a80df;
+}
+/* line 100, ../../assets/sass/step.sass */
+.selects ul.multiselect:focus li.selected {
+  color: white;
+  background-color: #95c0ef;
+}
+/* line 103, ../../assets/sass/step.sass */
+.selects ul.multiselect:focus li.selectcursor {
   color: white;
   background-color: #2a80df;
 }
 
-/* line 100, ../../assets/sass/step.sass */
+/* line 106, ../../assets/sass/step.sass */
 .untagged ul:empty {
   background-color: #dddddd;
 }
 
-/* line 102, ../../assets/sass/step.sass */
+/* line 108, ../../assets/sass/step.sass */
 iframe {
   width: 100%;
 }

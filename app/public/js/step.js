@@ -2,7 +2,7 @@
   var __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
   $(function() {
-    var $attr, $dragged, $inserted_row, $instance, $selects, $tag, $value, $word, delete_inserted_row, drag_mode, dragged_element_original_text, dragged_selector, drop_ok, fill_instances_by_word, get_selector, insert_row_timer, is_ctrl_down, is_mac, num_selects, original_column, selects;
+    var $attr, $dragged, $inserted_row, $instance, $selects, $tag, $value, $word, delete_inserted_row, drag_mode, dragged_element_original_text, dragged_selector, drop_ok, fill_instances_by_word, get_selector, insert_row_timer, is_ctrl_down, is_mac, move_vertically, num_selects, original_column, scroll_into_view, selects;
     is_mac = window.navigator.platform === 'MacIntel';
     is_ctrl_down = function(evt) {
       if (is_mac) {
@@ -68,16 +68,21 @@
       return $li.addClass('selected');
     });
     $selects.on('customselect', '.multiselect', function(evt, params) {
-      var $li, selected;
+      var $li, $ul, selected;
       $li = $(params.li);
-      if (!params.ctrl) {
-        $li.closest('ul').find('li.selected').removeClass('selected');
-      }
-      selected = $li.hasClass('selected');
-      if (!selected) {
-        return $li.addClass('selected');
-      } else if (params.ctrl) {
-        return $li.removeClass('selected');
+      $ul = $li.closest('ul');
+      if (!params.noselect) {
+        $ul.find('li.selectcursor').removeClass('selectcursor');
+        $li.addClass('selectcursor');
+        if (!params.ctrl) {
+          $li.closest('ul').find('li.selected').removeClass('selected');
+        }
+        selected = $li.hasClass('selected');
+        if (!selected) {
+          return $li.addClass('selected');
+        } else if (params.ctrl) {
+          return $li.removeClass('selected');
+        }
       }
     });
     $selects.on('click', '.uniselect, .multiselect', function(evt) {
@@ -214,54 +219,83 @@
     });
     selects = ['tag', 'attr', 'word', 'value', 'instance', 'independent', 'decoration', 'object', 'metainfo'];
     num_selects = selects.length;
-    $('.selects ul').keydown(function(evt) {
-      var $li, $selected_li, $ul, current, li, next, pos, ul, ul_bottom, ul_top;
-      current = selects.indexOf(evt.target.id);
+    $('.selects ul').on('keydown', function(evt) {
+      var $this, next, pass_through;
+      $this = $(this);
       next = (function() {
         switch (evt.keyCode) {
           case 37:
-            return selects[(current + num_selects - 1) % num_selects];
+            return $this.trigger('movehorizontally', -1);
           case 39:
-            return selects[(current + 1) % num_selects];
+            return $this.trigger('movehorizontally', +1);
           case 38:
-            $selected_li = $(evt.target).find('li.selected');
-            $li = $selected_li.prev();
-            return selects[current];
+            return $this.trigger('movevertically', -1);
           case 40:
-            $selected_li = $(evt.target).find('li.selected');
-            $li = $selected_li.next();
-            return selects[current];
+            return $this.trigger('movevertically', +1);
+          case 32:
+            return $this.trigger('togglecurrent');
+          default:
+            return pass_through = true;
         }
       })();
-      if (next) {
+      if (!pass_through) {
         evt.stopPropagation();
-        evt.preventDefault();
-        if ($selected_li) {
-          if ((li = $li[0])) {
-            $selected_li.removeClass('selected');
-            $li.addClass('selected');
-            ul = evt.target;
-            ul_top = ul.scrollTop;
-            ul_bottom = ul_top + ul.clientHeight - li.clientHeight;
-            pos = li.offsetTop - ul.offsetTop;
-            if (pos < ul_top) {
-              li.scrollIntoView(true);
-            } else if (pos > ul_bottom) {
-              li.scrollIntoView(false);
-            }
-          }
-        } else {
-          $ul = $("#" + next);
-          $ul.focus();
-          $li = $ul.find('li.selected');
-          if (!$li.length) {
-            $li = $ul.find('li:first-child');
-          }
-        }
-        if ($li.length) {
-          return $li[0].click();
-        }
+        return evt.preventDefault();
       }
+    });
+    move_vertically = function($ul, dir, klass) {
+      var $li, $next_li;
+      $li = $();
+      if (klass === 'selectcursor') {
+        $li = $ul.find('li.selectcursor');
+      }
+      if (!$li.length) {
+        $li = $ul.find('li.selected').first();
+      }
+      if (!$li.length) {
+        $li = $ul.find('li:first-child');
+      }
+      $next_li = dir === +1 ? $li.next() : dir === -1 ? $li.prev() : $li;
+      if ($next_li.length) {
+        $li.removeClass(klass);
+        $next_li.addClass(klass);
+        $ul.trigger('update');
+        return scroll_into_view($next_li);
+      }
+    };
+    scroll_into_view = function($li) {
+      var li, pos, ul, ul_bottom, ul_top;
+      ul = $li.closest('ul')[0];
+      li = $li[0];
+      ul_top = ul.scrollTop;
+      ul_bottom = ul_top + ul.clientHeight - li.clientHeight;
+      pos = li.offsetTop - ul.offsetTop;
+      if (pos < ul_top) {
+        return li.scrollIntoView(true);
+      } else if (pos > ul_bottom) {
+        return li.scrollIntoView(false);
+      }
+    };
+    $selects.on('movevertically', '.uniselect', function(evt, dir) {
+      return move_vertically($(this), dir, 'selected');
+    });
+    $selects.on('movevertically', '.multiselect', function(evt, dir) {
+      return move_vertically($(this), dir, 'selectcursor');
+    });
+    $selects.on('movehorizontally', 'ul', function(evt, dir) {
+      var $next_ul, current_index, next_id;
+      current_index = selects.indexOf($(this).prop('id'));
+      next_id = selects[(current_index + num_selects + dir) % num_selects];
+      $next_ul = $("#" + next_id);
+      $next_ul.focus();
+      $next_ul.trigger('movevertically', 0);
+      return $next_ul.trigger('update');
+    });
+    $selects.on('togglecurrent', '.multiselect', function(evt, dir) {
+      var $li, $ul;
+      $ul = $(this);
+      $li = $ul.find('li.selectcursor');
+      return $li.toggleClass('selected');
     });
     get_selector = function() {
       var selected_attr, selected_tag, selected_words;
@@ -304,11 +338,18 @@
       return $inserted_row = $();
     };
     $('#tag, #attr, #word').on('dragstart', 'li', function(evt) {
+      var $ul, noselect;
       $('#independent, #decoration, #object, #metainfo').addClass('droppable');
       drop_ok = false;
       original_column = null;
-      evt.target.click();
       $dragged = $(evt.target);
+      noselect = $dragged.hasClass('selected');
+      $ul = $dragged.closest('ul');
+      $ul.trigger('customselect', {
+        li: $dragged,
+        noselect: noselect
+      });
+      $ul.trigger('update');
       dragged_element_original_text = $dragged.text();
       dragged_selector = get_selector();
       return $dragged.text(dragged_selector);
