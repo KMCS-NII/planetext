@@ -1,13 +1,14 @@
 $ ->
+  is_mac = window.navigator.platform == 'MacIntel'
+  is_ctrl_down = (evt) -> if is_mac then evt.metaKey else evt.ctrlKey
+
   $tag = $('#tag')
   $attr = $('#attr')
   $word = $('#word')
   $value = $('#value')
   $instance = $('#instance')
+  $selects = $('.selects')
 
-  select_li = (evt) ->
-    $(evt.target).closest('ul').find('li.selected').removeClass('selected')
-    $selected_li = $(evt.target).addClass('selected')
   fill_instances_by_word = ->
     matching = null
     selected_tag = $tag.find('li.selected').text()
@@ -22,19 +23,46 @@ $ ->
       else
         matching = {}
         matching[index] = true for index in word_instances
+    return {} unless matching
     unique_values = {}
     for index in Object.keys(matching)
       data = attr[1][index]
       str = "#{data[2]} (#{data[0]}-#{data[1]})"
       $('<li>').text(str).appendTo($instance)
-      unique_values[attr[1][index][3]] = true;
+      unique_values[attr[1][index][3]] = true
     unique_values
 
-  $tag.on 'update', (evt, selected_tag) ->
+  $selects.on 'customselect', '.uniselect', (evt, params) ->
+    $li = $(params.li)
+    $li.closest('ul').find('li.selected').removeClass('selected')
+    $li.addClass('selected')
+  $selects.on 'customselect', '.multiselect', (evt, params) ->
+    $li = $(params.li)
+    if !params.ctrl
+      $li.closest('ul').find('li.selected').removeClass('selected')
+    selected = $li.hasClass('selected')
+    if !selected
+      $li.addClass('selected')
+    else if params.ctrl
+      $li.removeClass('selected')
+
+  $selects.on 'click', '.uniselect, .multiselect', (evt) ->
+    evt.stopPropagation()
+    $ul = $(evt.target)
+    $ul.find('li.selected').removeClass('selected')
+    $ul.trigger('update')
+  $selects.on 'click', '.uniselect > li, .multiselect > li', (evt) ->
+    evt.stopPropagation()
+    $ul = $(evt.target).closest('ul')
+    $ul.trigger('customselect', { li: evt.target, ctrl: is_ctrl_down(evt) })
+    $ul.trigger('update')
+
+  $tag.on 'update', (evt) ->
     $attr.empty()
     $word.empty()
     $value.empty()
     $instance.empty()
+    selected_tag = $tag.find('li.selected').text()
     if selected_tag
       known = {}
       for attr_name, attr of unknowns[selected_tag]
@@ -45,77 +73,54 @@ $ ->
           unless known[str]
             $('<li>').text(str).appendTo($instance)
             known[str] = true
-  $tag.on 'click', ->
-    $tag.find('li.selected').removeClass('selected')
-    $tag.trigger('update')
-  # TODO convert the other click events into click + update (+ select?)
-  # to allow dragstart to call selectively (XXX think it through)
-  $tag.on 'click', 'li', (evt) ->
-    evt.stopPropagation()
-    $selected_li = select_li(evt)
-    selected_tag = $selected_li.text()
-    $tag.trigger('update', selected_tag)
-  $attr.on 'click', ->
-    $attr.find('li.selected').removeClass('selected')
+
+  $attr.on 'update', (evt) ->
     $word.empty()
     $value.empty()
     $instance.empty()
-  $attr.on 'click', 'li', (evt) ->
-    evt.stopPropagation()
-    $word.empty()
+    selected_attr = $attr.find('li.selected').text()
+    if selected_attr
+      selected_tag = $tag.find('li.selected').text()
+      attr = unknowns[selected_tag][selected_attr]
+      known = {}
+      for attr_word of attr[0]
+        $('<li draggable="true">').text(attr_word).appendTo($word)
+        for index in attr[0][attr_word]
+          data = attr[1][index]
+          str = "#{data[2]} (#{data[0]}-#{data[1]})"
+          unless known[str]
+            $('<li>').text(str).appendTo($instance)
+            known[str] = true
+
+  $word.on 'update', ->
     $value.empty()
     $instance.empty()
-    $selected_li = select_li(evt)
-    selected_tag = $tag.find('li.selected').text()
-    selected_attr = $selected_li.text()
-    attr = unknowns[selected_tag][selected_attr]
-    known = {}
-    for attr_word of attr[0]
-      $('<li draggable="true">').text(attr_word).appendTo($word)
-      for index in attr[0][attr_word]
-        data = attr[1][index]
-        str = "#{data[2]} (#{data[0]}-#{data[1]})"
-        unless known[str]
-          $('<li>').text(str).appendTo($instance)
-          known[str] = true
-  $word.on 'click', ->
-    $word.find('li.selected').removeClass('selected')
-    $value.empty()
-    $instance.empty()
-  $word.on 'click', 'li', (evt) ->
-    evt.stopPropagation()
-    $value.empty()
-    $instance.empty()
-    $selected_li = select_li(evt)
     unique_values = fill_instances_by_word()
     for value in Object.keys(unique_values)
       $('<li>').text(value).appendTo($value)
-  $value.on 'click', ->
-    $value.find('li.selected').removeClass('selected')
+
+  $value.on 'update', ->
     $instance.empty()
+    selected_value = $value.find('li.selected').text()
+    if selected_value
+      selected_tag = $tag.find('li.selected').text()
+      selected_attr = $attr.find('li.selected').text()
+      attr = unknowns[selected_tag][selected_attr]
+      known = {}
+      for data in attr[1]
+        if data[3] == selected_value
+          str = "#{data[2]} (#{data[0]}-#{data[1]})"
+          unless known[str]
+            $('<li>').text(str).appendTo($instance)
+            known[str] = true
     fill_instances_by_word()
-  $value.on 'click', 'li', (evt) ->
-    evt.stopPropagation()
-    $instance.empty()
-    $selected_li = select_li(evt)
-    selected_tag = $tag.find('li.selected').text()
-    selected_attr = $attr.find('li.selected').text()
-    selected_value = $selected_li.text()
-    attr = unknowns[selected_tag][selected_attr]
-    known = {}
-    for data in attr[1]
-      if data[3] == selected_value
-        str = "#{data[2]} (#{data[0]}-#{data[1]})"
-        unless known[str]
-          $('<li>').text(str).appendTo($instance)
-          known[str] = true
-  $instance.on 'click', ->
-    $instance.find('li.selected').removeClass('selected')
-    # TODO clear the instance
-  $instance.on 'click', 'li', (evt) ->
-    evt.stopPropagation()
-    $selected_li = select_li(evt)
-    # TODO show the instance
+
+  $instance.on 'update', ->
+    selected_instance = $instance.find('li.selected').text()
+    if selected_instance
+      # TODO show the instance
+    else
+      # TODO clear the instance
 
   selects = [
     'tag',
@@ -213,25 +218,25 @@ $ ->
     original_column = $dragged.closest('ul').prop('id')
     dragged_selector = $dragged.text()
     $("#tag, #attr, #values, #independent, #decoration, #object, #metainfo").addClass('droppable')
-  $('.selects').on 'drag', 'li', (evt) ->
+  $selects.on 'drag', 'li', (evt) ->
     if dragged_element_original_text
       $dragged = $(evt.target)
       $dragged.text(dragged_element_original_text)
       dragged_element_original_text = null
-  $('.selects').on 'dragover', '.droppable, .droppable li', (evt) ->
+  $selects.on 'dragover', '.droppable, .droppable li', (evt) ->
     evt.preventDefault()
-  $('.selects').on 'dragenter', 'li:not(.inserted)', (evt) ->
+  $selects.on 'dragenter', 'li:not(.inserted)', (evt) ->
     return if $(evt.target).closest('.selects').hasClass('untagged')
     clearTimeout(insert_row_timer)
     insert_row_timer = setTimeout((->
       delete_inserted_row()
       $inserted_row = $('<li class="inserted">&nbsp;</li>').insertBefore(evt.target)
     ), 500)
-  $('.selects').on 'dragleave', '.inserted', (evt) ->
+  $selects.on 'dragleave', '.inserted', (evt) ->
     delete_inserted_row()
     clearTimeout(insert_row_timer)
     insert_row_timer = null
-  $('.selects').on 'drop', '.droppable li, .droppable', (evt) ->
+  $selects.on 'drop', '.droppable li, .droppable', (evt) ->
     evt.preventDefault()
     evt.stopPropagation()
     drop_ok = true
@@ -263,7 +268,7 @@ $ ->
       location.reload(true)
     ))
     original_column = null
-  $('.selects').on 'dragend', (evt) ->
+  $selects.on 'dragend', (evt) ->
     $('.droppable').removeClass('droppable')
     delete_inserted_row() unless drop_ok
     clearTimeout(insert_row_timer)
