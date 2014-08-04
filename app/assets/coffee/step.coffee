@@ -10,19 +10,16 @@ $ ->
   $selects = $('.selects')
 
   fill_instances_by_word = ->
-    # TODO FIXME multiple words don't work well, e.g.
-    # "xmlns:h1[class: title document-title]"
-    # gives no results
     matching = null
     selected_tag = $tag.find('li.selected').text()
     selected_attr = $attr.find('li.selected').text()
     attr = unknowns[selected_tag][selected_attr]
-    $word.find('li.selected').map ->
+    $word.find('li.selected').each ->
       word = this.textContent
       word_instances = attr[0][word]
       if matching
         for index of matching
-          delete matching[index] unless index in word_instances
+          delete matching[index] unless parseInt(index, 10) in word_instances
       else
         matching = {}
         matching[index] = true for index in word_instances

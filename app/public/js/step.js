@@ -23,14 +23,14 @@
       selected_tag = $tag.find('li.selected').text();
       selected_attr = $attr.find('li.selected').text();
       attr = unknowns[selected_tag][selected_attr];
-      $word.find('li.selected').map(function() {
-        var index, word, word_instances, _i, _len, _results, _results1;
+      $word.find('li.selected').each(function() {
+        var index, word, word_instances, _i, _len, _ref, _results, _results1;
         word = this.textContent;
         word_instances = attr[0][word];
         if (matching) {
           _results = [];
           for (index in matching) {
-            if (__indexOf.call(word_instances, index) < 0) {
+            if (_ref = parseInt(index, 10), __indexOf.call(word_instances, _ref) < 0) {
               _results.push(delete matching[index]);
             } else {
               _results.push(void 0);
