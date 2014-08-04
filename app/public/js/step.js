@@ -2,31 +2,35 @@
   var __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
   $(function() {
-    var $attr, $dragged, $inserted_row, $instance, $tag, $value, $word, delete_inserted_row, drag_mode, dragged_element_original_text, dragged_selector, drop_ok, fill_instances_by_word, get_selector, insert_row_timer, num_selects, original_column, select_li, selects;
+    var $attr, $dragged, $inserted_row, $instance, $selects, $tag, $value, $word, delete_inserted_row, drag_mode, dragged_element_original_text, dragged_selector, drop_ok, fill_instances_by_word, get_selector, insert_row_timer, is_ctrl_down, is_mac, move_vertically, num_selects, original_column, scroll_into_view, selects;
+    is_mac = window.navigator.platform === 'MacIntel';
+    is_ctrl_down = function(evt) {
+      if (is_mac) {
+        return evt.metaKey;
+      } else {
+        return evt.ctrlKey;
+      }
+    };
     $tag = $('#tag');
     $attr = $('#attr');
     $word = $('#word');
     $value = $('#value');
     $instance = $('#instance');
-    select_li = function(evt) {
-      var $selected_li;
-      $(evt.target).closest('ul').find('li.selected').removeClass('selected');
-      return $selected_li = $(evt.target).addClass('selected');
-    };
+    $selects = $('.selects');
     fill_instances_by_word = function() {
       var attr, data, index, matching, selected_attr, selected_tag, str, unique_values, _i, _len, _ref;
       matching = null;
       selected_tag = $tag.find('li.selected').text();
       selected_attr = $attr.find('li.selected').text();
       attr = unknowns[selected_tag][selected_attr];
-      $word.find('li.selected').map(function() {
-        var index, word, word_instances, _i, _len, _results, _results1;
+      $word.find('li.selected').each(function() {
+        var index, word, word_instances, _i, _len, _ref, _results, _results1;
         word = this.textContent;
         word_instances = attr[0][word];
         if (matching) {
           _results = [];
           for (index in matching) {
-            if (__indexOf.call(word_instances, index) < 0) {
+            if (_ref = parseInt(index, 10), __indexOf.call(word_instances, _ref) < 0) {
               _results.push(delete matching[index]);
             } else {
               _results.push(void 0);
@@ -43,6 +47,9 @@
           return _results1;
         }
       });
+      if (!matching) {
+        return {};
+      }
       unique_values = {};
       _ref = Object.keys(matching);
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -54,12 +61,54 @@
       }
       return unique_values;
     };
-    $tag.on('update', function(evt, selected_tag) {
-      var attr, attr_name, data, known, str, _ref, _results;
+    $selects.on('customselect', '.uniselect', function(evt, params) {
+      var $li;
+      $li = $(params.li);
+      $li.closest('ul').find('li.selected').removeClass('selected');
+      return $li.addClass('selected');
+    });
+    $selects.on('customselect', '.multiselect', function(evt, params) {
+      var $li, $ul, selected;
+      $li = $(params.li);
+      $ul = $li.closest('ul');
+      if (!params.noselect) {
+        $ul.find('li.selectcursor').removeClass('selectcursor');
+        $li.addClass('selectcursor');
+        if (!params.ctrl) {
+          $li.closest('ul').find('li.selected').removeClass('selected');
+        }
+        selected = $li.hasClass('selected');
+        if (!selected) {
+          return $li.addClass('selected');
+        } else if (params.ctrl) {
+          return $li.removeClass('selected');
+        }
+      }
+    });
+    $selects.on('click', '.uniselect, .multiselect', function(evt) {
+      var $ul;
+      evt.stopPropagation();
+      $ul = $(evt.target);
+      $ul.find('li.selected').removeClass('selected');
+      return $ul.trigger('update');
+    });
+    $selects.on('click', '.uniselect > li, .multiselect > li', function(evt) {
+      var $ul;
+      evt.stopPropagation();
+      $ul = $(evt.target).closest('ul');
+      $ul.trigger('customselect', {
+        li: evt.target,
+        ctrl: is_ctrl_down(evt)
+      });
+      return $ul.trigger('update');
+    });
+    $tag.on('update', function(evt) {
+      var attr, attr_name, data, known, selected_tag, str, _ref, _results;
       $attr.empty();
       $word.empty();
       $value.empty();
       $instance.empty();
+      selected_tag = $tag.find('li.selected').text();
       if (selected_tag) {
         known = {};
         _ref = unknowns[selected_tag];
@@ -89,68 +138,44 @@
         return _results;
       }
     });
-    $tag.on('click', function() {
-      $tag.find('li.selected').removeClass('selected');
-      return $tag.trigger('update');
-    });
-    $tag.on('click', 'li', function(evt) {
-      var $selected_li, selected_tag;
-      evt.stopPropagation();
-      $selected_li = select_li(evt);
-      selected_tag = $selected_li.text();
-      return $tag.trigger('update', selected_tag);
-    });
-    $attr.on('click', function() {
-      $attr.find('li.selected').removeClass('selected');
-      $word.empty();
-      $value.empty();
-      return $instance.empty();
-    });
-    $attr.on('click', 'li', function(evt) {
-      var $selected_li, attr, attr_word, data, index, known, selected_attr, selected_tag, str, _results;
-      evt.stopPropagation();
+    $attr.on('update', function(evt) {
+      var attr, attr_word, data, index, known, selected_attr, selected_tag, str, _results;
       $word.empty();
       $value.empty();
       $instance.empty();
-      $selected_li = select_li(evt);
-      selected_tag = $tag.find('li.selected').text();
-      selected_attr = $selected_li.text();
-      attr = unknowns[selected_tag][selected_attr];
-      known = {};
-      _results = [];
-      for (attr_word in attr[0]) {
-        $('<li draggable="true">').text(attr_word).appendTo($word);
-        _results.push((function() {
-          var _i, _len, _ref, _results1;
-          _ref = attr[0][attr_word];
-          _results1 = [];
-          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-            index = _ref[_i];
-            data = attr[1][index];
-            str = "" + data[2] + " (" + data[0] + "-" + data[1] + ")";
-            if (!known[str]) {
-              $('<li>').text(str).appendTo($instance);
-              _results1.push(known[str] = true);
-            } else {
-              _results1.push(void 0);
+      selected_attr = $attr.find('li.selected').text();
+      if (selected_attr) {
+        selected_tag = $tag.find('li.selected').text();
+        attr = unknowns[selected_tag][selected_attr];
+        known = {};
+        _results = [];
+        for (attr_word in attr[0]) {
+          $('<li draggable="true">').text(attr_word).appendTo($word);
+          _results.push((function() {
+            var _i, _len, _ref, _results1;
+            _ref = attr[0][attr_word];
+            _results1 = [];
+            for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+              index = _ref[_i];
+              data = attr[1][index];
+              str = "" + data[2] + " (" + data[0] + "-" + data[1] + ")";
+              if (!known[str]) {
+                $('<li>').text(str).appendTo($instance);
+                _results1.push(known[str] = true);
+              } else {
+                _results1.push(void 0);
+              }
             }
-          }
-          return _results1;
-        })());
+            return _results1;
+          })());
+        }
+        return _results;
       }
-      return _results;
     });
-    $word.on('click', function() {
-      $word.find('li.selected').removeClass('selected');
-      $value.empty();
-      return $instance.empty();
-    });
-    $word.on('click', 'li', function(evt) {
-      var $selected_li, unique_values, value, _i, _len, _ref, _results;
-      evt.stopPropagation();
+    $word.on('update', function() {
+      var unique_values, value, _i, _len, _ref, _results;
       $value.empty();
       $instance.empty();
-      $selected_li = select_li(evt);
       unique_values = fill_instances_by_word();
       _ref = Object.keys(unique_values);
       _results = [];
@@ -160,97 +185,117 @@
       }
       return _results;
     });
-    $value.on('click', function() {
-      $value.find('li.selected').removeClass('selected');
+    $value.on('update', function() {
+      var attr, data, known, selected_attr, selected_tag, selected_value, str, _i, _len, _ref;
       $instance.empty();
-      return fill_instances_by_word();
-    });
-    $value.on('click', 'li', function(evt) {
-      var $selected_li, attr, data, known, selected_attr, selected_tag, selected_value, str, _i, _len, _ref, _results;
-      evt.stopPropagation();
-      $instance.empty();
-      $selected_li = select_li(evt);
-      selected_tag = $tag.find('li.selected').text();
-      selected_attr = $attr.find('li.selected').text();
-      selected_value = $selected_li.text();
-      attr = unknowns[selected_tag][selected_attr];
-      known = {};
-      _ref = attr[1];
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        data = _ref[_i];
-        if (data[3] === selected_value) {
-          str = "" + data[2] + " (" + data[0] + "-" + data[1] + ")";
-          if (!known[str]) {
-            $('<li>').text(str).appendTo($instance);
-            _results.push(known[str] = true);
-          } else {
-            _results.push(void 0);
+      selected_value = $value.find('li.selected').text();
+      if (selected_value) {
+        selected_tag = $tag.find('li.selected').text();
+        selected_attr = $attr.find('li.selected').text();
+        attr = unknowns[selected_tag][selected_attr];
+        known = {};
+        _ref = attr[1];
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          data = _ref[_i];
+          if (data[3] === selected_value) {
+            str = "" + data[2] + " (" + data[0] + "-" + data[1] + ")";
+            if (!known[str]) {
+              $('<li>').text(str).appendTo($instance);
+              known[str] = true;
+            }
           }
-        } else {
-          _results.push(void 0);
         }
       }
-      return _results;
+      return fill_instances_by_word();
     });
-    $instance.on('click', function() {
-      return $instance.find('li.selected').removeClass('selected');
-    });
-    $instance.on('click', 'li', function(evt) {
-      var $selected_li;
-      evt.stopPropagation();
-      return $selected_li = select_li(evt);
+    $instance.on('update', function() {
+      var selected_instance;
+      selected_instance = $instance.find('li.selected').text();
+      if (selected_instance) {
+
+      } else {
+
+      }
     });
     selects = ['tag', 'attr', 'word', 'value', 'instance', 'independent', 'decoration', 'object', 'metainfo'];
     num_selects = selects.length;
-    $('.selects ul').keydown(function(evt) {
-      var $li, $selected_li, $ul, current, li, next, pos, ul, ul_bottom, ul_top;
-      current = selects.indexOf(evt.target.id);
+    $('.selects ul').on('keydown', function(evt) {
+      var $this, next, pass_through;
+      $this = $(this);
       next = (function() {
         switch (evt.keyCode) {
           case 37:
-            return selects[(current + num_selects - 1) % num_selects];
+            return $this.trigger('movehorizontally', -1);
           case 39:
-            return selects[(current + 1) % num_selects];
+            return $this.trigger('movehorizontally', +1);
           case 38:
-            $selected_li = $(evt.target).find('li.selected');
-            $li = $selected_li.prev();
-            return selects[current];
+            return $this.trigger('movevertically', -1);
           case 40:
-            $selected_li = $(evt.target).find('li.selected');
-            $li = $selected_li.next();
-            return selects[current];
+            return $this.trigger('movevertically', +1);
+          case 32:
+            return $this.trigger('togglecurrent');
+          default:
+            return pass_through = true;
         }
       })();
-      if (next) {
+      if (!pass_through) {
         evt.stopPropagation();
-        evt.preventDefault();
-        if ($selected_li) {
-          if ((li = $li[0])) {
-            $selected_li.removeClass('selected');
-            $li.addClass('selected');
-            ul = evt.target;
-            ul_top = ul.scrollTop;
-            ul_bottom = ul_top + ul.clientHeight - li.clientHeight;
-            pos = li.offsetTop - ul.offsetTop;
-            if (pos < ul_top) {
-              li.scrollIntoView(true);
-            } else if (pos > ul_bottom) {
-              li.scrollIntoView(false);
-            }
-          }
-        } else {
-          $ul = $("#" + next);
-          $ul.focus();
-          $li = $ul.find('li.selected');
-          if (!$li.length) {
-            $li = $ul.find('li:first-child');
-          }
-        }
-        if ($li.length) {
-          return $li[0].click();
-        }
+        return evt.preventDefault();
       }
+    });
+    move_vertically = function($ul, dir, klass) {
+      var $li, $next_li;
+      $li = $();
+      if (klass === 'selectcursor') {
+        $li = $ul.find('li.selectcursor');
+      }
+      if (!$li.length) {
+        $li = $ul.find('li.selected').first();
+      }
+      if (!$li.length) {
+        $li = $ul.find('li:first-child');
+      }
+      $next_li = dir === +1 ? $li.next() : dir === -1 ? $li.prev() : $li;
+      if ($next_li.length) {
+        $li.removeClass(klass);
+        $next_li.addClass(klass);
+        $ul.trigger('update');
+        return scroll_into_view($next_li);
+      }
+    };
+    scroll_into_view = function($li) {
+      var li, pos, ul, ul_bottom, ul_top;
+      ul = $li.closest('ul')[0];
+      li = $li[0];
+      ul_top = ul.scrollTop;
+      ul_bottom = ul_top + ul.clientHeight - li.clientHeight;
+      pos = li.offsetTop - ul.offsetTop;
+      if (pos < ul_top) {
+        return li.scrollIntoView(true);
+      } else if (pos > ul_bottom) {
+        return li.scrollIntoView(false);
+      }
+    };
+    $selects.on('movevertically', '.uniselect', function(evt, dir) {
+      return move_vertically($(this), dir, 'selected');
+    });
+    $selects.on('movevertically', '.multiselect', function(evt, dir) {
+      return move_vertically($(this), dir, 'selectcursor');
+    });
+    $selects.on('movehorizontally', 'ul', function(evt, dir) {
+      var $next_ul, current_index, next_id;
+      current_index = selects.indexOf($(this).prop('id'));
+      next_id = selects[(current_index + num_selects + dir) % num_selects];
+      $next_ul = $("#" + next_id);
+      $next_ul.focus();
+      $next_ul.trigger('movevertically', 0);
+      return $next_ul.trigger('update');
+    });
+    $selects.on('togglecurrent', '.multiselect', function(evt, dir) {
+      var $li, $ul;
+      $ul = $(this);
+      $li = $ul.find('li.selectcursor');
+      return $li.toggleClass('selected');
     });
     get_selector = function() {
       var selected_attr, selected_tag, selected_words;
@@ -293,11 +338,18 @@
       return $inserted_row = $();
     };
     $('#tag, #attr, #word').on('dragstart', 'li', function(evt) {
+      var $ul, noselect;
       $('#independent, #decoration, #object, #metainfo').addClass('droppable');
       drop_ok = false;
       original_column = null;
-      evt.target.click();
       $dragged = $(evt.target);
+      noselect = $dragged.hasClass('selected');
+      $ul = $dragged.closest('ul');
+      $ul.trigger('customselect', {
+        li: $dragged,
+        noselect: noselect
+      });
+      $ul.trigger('update');
       dragged_element_original_text = $dragged.text();
       dragged_selector = get_selector();
       return $dragged.text(dragged_selector);
@@ -309,17 +361,17 @@
       dragged_selector = $dragged.text();
       return $("#tag, #attr, #values, #independent, #decoration, #object, #metainfo").addClass('droppable');
     });
-    $('.selects').on('drag', 'li', function(evt) {
+    $selects.on('drag', 'li', function(evt) {
       if (dragged_element_original_text) {
         $dragged = $(evt.target);
         $dragged.text(dragged_element_original_text);
         return dragged_element_original_text = null;
       }
     });
-    $('.selects').on('dragover', '.droppable, .droppable li', function(evt) {
+    $selects.on('dragover', '.droppable, .droppable li', function(evt) {
       return evt.preventDefault();
     });
-    $('.selects').on('dragenter', 'li:not(.inserted)', function(evt) {
+    $selects.on('dragenter', 'li:not(.inserted)', function(evt) {
       if ($(evt.target).closest('.selects').hasClass('untagged')) {
         return;
       }
@@ -329,12 +381,12 @@
         return $inserted_row = $('<li class="inserted">&nbsp;</li>').insertBefore(evt.target);
       }), 500);
     });
-    $('.selects').on('dragleave', '.inserted', function(evt) {
+    $selects.on('dragleave', '.inserted', function(evt) {
       delete_inserted_row();
       clearTimeout(insert_row_timer);
       return insert_row_timer = null;
     });
-    $('.selects').on('drop', '.droppable li, .droppable', function(evt) {
+    $selects.on('drop', '.droppable li, .droppable', function(evt) {
       var $target, $ul, pos, target_column, target_tagged;
       evt.preventDefault();
       evt.stopPropagation();
@@ -367,7 +419,7 @@
       }));
       return original_column = null;
     });
-    return $('.selects').on('dragend', function(evt) {
+    return $selects.on('dragend', function(evt) {
       $('.droppable').removeClass('droppable');
       if (!drop_ok) {
         delete_inserted_row();

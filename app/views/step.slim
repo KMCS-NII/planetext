@@ -23,43 +23,46 @@ html
     div.selects.untagged
       div
         div Tag
-        ul id="tag" tabindex="1"
+        ul id="tag" tabindex="1" class="uniselect"
           - unknowns.each do |tag_name, _|
             li draggable="true" #{tag_name}
       div
         div Attribute
-        ul id="attr" tabindex="2"
+        ul id="attr" tabindex="2" class="uniselect"
       div
         div Word
-        ul id="word" multiple="multiple" tabindex="3"
+        ul id="word" multiple="multiple" tabindex="3" class="multiselect"
       div
         div Value
-        ul id="value" tabindex="4"
+        ul id="value" tabindex="4" class="uniselect"
       div
         div Instance
-        ul id="instance" tabindex="5"
+        ul id="instance" tabindex="5" class="uniselect"
     div.leftheader.tagged Classified Tags
     div.selects.tagged
       div
         div Independent
-        ul id="independent" tabindex="6"
+        ul id="independent" tabindex="6" class="uniselect"
           - selectors[:independent].each do |selector|
             li draggable="true" =selector
       div
         div Decoration
-        ul id="decoration" tabindex="7"
+        ul id="decoration" tabindex="7" class="uniselect"
           - selectors[:decoration].each do |selector|
             li draggable="true" =selector
       div
         div Object
-        ul id="object" tabindex="8"
+        ul id="object" tabindex="8" class="uniselect"
           - selectors[:object].each do |selector|
             li draggable="true" =selector
       div
         div Metainfo
-        ul id="metainfo" tabindex="9"
+        ul id="metainfo" tabindex="9" class="uniselect"
           - selectors[:metainfo].each do |selector|
             li draggable="true" =selector
       div
         div Options
         ul id="options"
+    #frame
+      iframe
+    footer
