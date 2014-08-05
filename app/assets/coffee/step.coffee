@@ -261,10 +261,12 @@ $ ->
       column: target_column
       pos: pos,
       selector: selector
-    submit_changes(change)
+    submit_changes([change])
 
-  submit_changes = (change) ->
-    $.post(dataset_url + '/step', change, (->
+  submit_changes = (changes) ->
+    data =
+      changes: JSON.stringify(changes)
+    $.post(dataset_url + '/step', data, (->
       location.reload(true)
     ))
 

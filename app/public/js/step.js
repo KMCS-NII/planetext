@@ -366,10 +366,14 @@
         pos: pos,
         selector: selector
       };
-      return submit_changes(change);
+      return submit_changes([change]);
     };
-    submit_changes = function(change) {
-      return $.post(dataset_url + '/step', change, (function() {
+    submit_changes = function(changes) {
+      var data;
+      data = {
+        changes: JSON.stringify(changes)
+      };
+      return $.post(dataset_url + '/step', data, (function() {
         return location.reload(true);
       }));
     };
