@@ -126,7 +126,7 @@ $ ->
     else
       # TODO clear the instance
 
-  selects = [
+  SELECTS = [
     'tag',
     'attr',
     'word',
@@ -137,31 +137,34 @@ $ ->
     'object',
     'metainfo'
   ]
-  num_selects = selects.length
+  COLUMN_KEYCODES =
+    85: false          # U
+    73: 'independent'  # I
+    68: 'decoration'   # D
+    79: 'object'       # O
+    77: 'metainfo'     # M
+    48: false          # 0
+    49: 'independent'  # 1
+    50: 'decoration'   # 2
+    51: 'object'       # 3
+    52: 'metainfo'     # 4
+  num_selects = SELECTS.length
   $('.selects ul').on 'keydown', (evt) ->
+    pass_through = false
     $this = $(this)
-    next =
-      switch evt.keyCode
-        when 37 # left
-          $this.trigger('movehorizontally', -1)
-          # XXX selects[(current + num_selects - 1) % num_selects]
-        when 39 # right
-          $this.trigger('movehorizontally', +1)
-          # XXX selects[(current + 1) % num_selects]
-        when 38 # up
-          $this.trigger('movevertically', -1)
-          # XXX $selected_li = $(evt.target).find('li.selected')
-          # XXX $li = $selected_li.prev()
-          # XXX selects[current]
-        when 40 # down
-          $this.trigger('movevertically', +1)
-          # XXX $selected_li = $(evt.target).find('li.selected')
-          # XXX $li = $selected_li.next()
-          # XXX selects[current]
-        when 32
-          $this.trigger('togglecurrent')
-        else
-          pass_through = true
+    switch evt.keyCode
+      when 37 # left
+        $this.trigger('movehorizontally', -1)
+      when 39 # right
+        $this.trigger('movehorizontally', +1)
+      when 38 # up
+        $this.trigger('movevertically', -1)
+      when 40 # down
+        $this.trigger('movevertically', +1)
+      when 32
+        $this.trigger('togglecurrent')
+      else
+        pass_through = true
     unless pass_through
       evt.stopPropagation()
       evt.preventDefault()
@@ -201,8 +204,8 @@ $ ->
     move_vertically($(this), dir, 'selectcursor')
 
   $selects.on 'movehorizontally', 'ul', (evt, dir) ->
-    current_index = selects.indexOf($(this).prop('id'))
-    next_id = selects[(current_index + num_selects + dir) % num_selects]
+    current_index = SELECTS.indexOf($(this).prop('id'))
+    next_id = SELECTS[(current_index + num_selects + dir) % num_selects]
     $next_ul = $("##{next_id}")
     $next_ul.focus()
     #if $next_ul.hasClass('uniselect')
@@ -215,6 +218,7 @@ $ ->
     $ul = $(this)
     $li = $ul.find('li.selectcursor')
     $li.toggleClass('selected')
+    $ul.trigger('update')
 
   get_selector = ->
     selected_tag = $tag.find('li.selected').text()
@@ -227,17 +231,36 @@ $ ->
     else
       selected_tag
 
-  window.parse_selector = (selector) ->
-    matches = /^([^\]\[]+)(?:\[([^:]*)(?::\s*([^\]]*))?\])?$/.exec(selector)
-    [_, tag, attr, vals] = matches
-    data = [tag]
-    data.push(attr) if attr
-    data.push((vals.split(/\s+/))...) if vals
-    data
+  $inserted_row = $()
+  move_selector = (selector, current_column, $target) ->
+    $ul = $target.closest('ul')
+    target_column = $ul.prop('id')
+    target_tagged = $ul.closest('.selects').hasClass('tagged')
+    if target_tagged
+      unless $target.hasClass('inserted')
+        delete_inserted_row()
+        $inserted_row = $('<li class="inserted"></li>').appendTo($ul)
+      $inserted_row.text(dragged_selector)
+    else
+      target_column = null
+    pos =
+      if $target.hasClass('inserted')
+        $target.index()
+      else
+        -1
+    $("##{current_column}").find('li.selected').remove()
+    current_column = null unless current_column in ['independent', 'decoration', 'object', 'metainfo']
+    $.post(dataset_url + '/step', {
+      previous: current_column
+      column: target_column
+      pos: pos,
+      selector: selector
+    }, (->
+      location.reload(true)
+    ))
 
   dragged_element_original_text = null
   insert_row_timer = null
-  $inserted_row = $()
   $dragged = null
   drop_ok = false
   dragged_selector = null
@@ -249,21 +272,25 @@ $ ->
   $('#tag, #attr, #word').on 'dragstart', 'li', (evt) ->
     $('#independent, #decoration, #object, #metainfo').addClass('droppable')
     drop_ok = false
-    original_column = null
     $dragged = $(evt.target)
-    noselect = $dragged.hasClass('selected')
     $ul = $dragged.closest('ul')
+    original_column = $ul.prop('id')
+    noselect = $dragged.hasClass('selected')
     $ul.trigger('customselect', { li: $dragged, noselect: noselect })
     $ul.trigger('update')
     dragged_element_original_text = $dragged.text()
     dragged_selector = get_selector()
     $dragged.text(dragged_selector)
   $('#independent, #decoration, #object, #metainfo').on 'dragstart', 'li', (evt) ->
+    # TODO: DRY it up, with above
     drop_ok = false
     $dragged = $(evt.target)
-    original_column = $dragged.closest('ul').prop('id')
+    $ul = $dragged.closest('ul')
+    original_column = $ul.prop('id')
+    noselect = $dragged.hasClass('selected')
+    $ul.trigger('customselect', { li: $dragged, noselect: noselect })
     dragged_selector = $dragged.text()
-    $("#tag, #attr, #values, #independent, #decoration, #object, #metainfo").addClass('droppable')
+    $("#tag, #attr, #word, #independent, #decoration, #object, #metainfo").addClass('droppable')
   $selects.on 'drag', 'li', (evt) ->
     if dragged_element_original_text
       $dragged = $(evt.target)
@@ -285,36 +312,28 @@ $ ->
   $selects.on 'drop', '.droppable li, .droppable', (evt) ->
     evt.preventDefault()
     evt.stopPropagation()
-    drop_ok = true
-    $target = $(evt.target)
-    $ul = $target.closest('ul')
-    if original_column
-      $dragged.remove()
-    target_column = $ul.prop('id')
-    target_tagged = $ul.closest('.selects').hasClass('tagged')
-    if target_tagged
-      unless $target.hasClass('inserted')
-        delete_inserted_row()
-        $inserted_row = $('<li class="inserted"></li>').appendTo($ul)
-      $inserted_row.text(dragged_selector)
-    else
-      target_column = null
+    move_selector(dragged_selector, original_column, $(evt.target))
     $inserted_row = $()
-    pos =
-      if $target.hasClass('inserted')
-        $target.index()
-      else
-        -1
-    $.post(dataset_url + '/step', {
-      previous: original_column
-      column: target_column
-      pos: pos,
-      selector: dragged_selector
-    }, (->
-      location.reload(true)
-    ))
     original_column = null
+    drop_ok = true
   $selects.on 'dragend', (evt) ->
     $('.droppable').removeClass('droppable')
     delete_inserted_row() unless drop_ok
     clearTimeout(insert_row_timer)
+  $selects.on 'keyup', '#tag, #attr, #word, #independent, #decoration, #object, #metainfo', (evt) ->
+    target_column = COLUMN_KEYCODES[evt.which]
+    return if target_column == undefined # wrong key
+    $ul = $(evt.target)
+    effective_current_column = current_column = $ul.prop('id')
+    effective_current_column = null unless current_column in ['independent', 'decoration', 'object', 'metainfo']
+    return unless current_column || target_column # a tagged column has to be involved (U->U is illegal)
+    if current_column == 'word' && !$ul.find('li.selected').length
+      $ul.trigger('togglecurrent')
+    selector = if effective_current_column then $ul.find('li.selected').text() else get_selector()
+    $target_column = $("##{target_column}")
+    move_selector(selector, current_column, $target_column)
+    $('<li class="inserted"></li>').text(selector).appendTo($target_column)
+    evt.preventDefault()
+    evt.stopPropagation()
+    return false
+  $tag.focus().find('li:first-child').addClass('selected')

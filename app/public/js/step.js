@@ -2,7 +2,7 @@
   var __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
   $(function() {
-    var $attr, $dragged, $inserted_row, $instance, $selects, $tag, $value, $word, delete_inserted_row, drag_mode, dragged_element_original_text, dragged_selector, drop_ok, fill_instances_by_word, get_selector, insert_row_timer, is_ctrl_down, is_mac, move_vertically, num_selects, original_column, scroll_into_view, selects;
+    var $attr, $dragged, $inserted_row, $instance, $selects, $tag, $value, $word, COLUMN_KEYCODES, SELECTS, delete_inserted_row, drag_mode, dragged_element_original_text, dragged_selector, drop_ok, fill_instances_by_word, get_selector, insert_row_timer, is_ctrl_down, is_mac, move_selector, move_vertically, num_selects, original_column, scroll_into_view;
     is_mac = window.navigator.platform === 'MacIntel';
     is_ctrl_down = function(evt) {
       if (is_mac) {
@@ -217,27 +217,43 @@
 
       }
     });
-    selects = ['tag', 'attr', 'word', 'value', 'instance', 'independent', 'decoration', 'object', 'metainfo'];
-    num_selects = selects.length;
+    SELECTS = ['tag', 'attr', 'word', 'value', 'instance', 'independent', 'decoration', 'object', 'metainfo'];
+    COLUMN_KEYCODES = {
+      85: false,
+      73: 'independent',
+      68: 'decoration',
+      79: 'object',
+      77: 'metainfo',
+      48: false,
+      49: 'independent',
+      50: 'decoration',
+      51: 'object',
+      52: 'metainfo'
+    };
+    num_selects = SELECTS.length;
     $('.selects ul').on('keydown', function(evt) {
-      var $this, next, pass_through;
+      var $this, pass_through;
+      pass_through = false;
       $this = $(this);
-      next = (function() {
-        switch (evt.keyCode) {
-          case 37:
-            return $this.trigger('movehorizontally', -1);
-          case 39:
-            return $this.trigger('movehorizontally', +1);
-          case 38:
-            return $this.trigger('movevertically', -1);
-          case 40:
-            return $this.trigger('movevertically', +1);
-          case 32:
-            return $this.trigger('togglecurrent');
-          default:
-            return pass_through = true;
-        }
-      })();
+      switch (evt.keyCode) {
+        case 37:
+          $this.trigger('movehorizontally', -1);
+          break;
+        case 39:
+          $this.trigger('movehorizontally', +1);
+          break;
+        case 38:
+          $this.trigger('movevertically', -1);
+          break;
+        case 40:
+          $this.trigger('movevertically', +1);
+          break;
+        case 32:
+          $this.trigger('togglecurrent');
+          break;
+        default:
+          pass_through = true;
+      }
       if (!pass_through) {
         evt.stopPropagation();
         return evt.preventDefault();
@@ -284,8 +300,8 @@
     });
     $selects.on('movehorizontally', 'ul', function(evt, dir) {
       var $next_ul, current_index, next_id;
-      current_index = selects.indexOf($(this).prop('id'));
-      next_id = selects[(current_index + num_selects + dir) % num_selects];
+      current_index = SELECTS.indexOf($(this).prop('id'));
+      next_id = SELECTS[(current_index + num_selects + dir) % num_selects];
       $next_ul = $("#" + next_id);
       $next_ul.focus();
       $next_ul.trigger('movevertically', 0);
@@ -295,7 +311,8 @@
       var $li, $ul;
       $ul = $(this);
       $li = $ul.find('li.selectcursor');
-      return $li.toggleClass('selected');
+      $li.toggleClass('selected');
+      return $ul.trigger('update');
     });
     get_selector = function() {
       var selected_attr, selected_tag, selected_words;
@@ -312,22 +329,37 @@
         return selected_tag;
       }
     };
-    window.parse_selector = function(selector) {
-      var attr, data, matches, tag, vals, _;
-      matches = /^([^\]\[]+)(?:\[([^:]*)(?::\s*([^\]]*))?\])?$/.exec(selector);
-      _ = matches[0], tag = matches[1], attr = matches[2], vals = matches[3];
-      data = [tag];
-      if (attr) {
-        data.push(attr);
+    $inserted_row = $();
+    move_selector = function(selector, current_column, $target) {
+      var $ul, pos, target_column, target_tagged;
+      $ul = $target.closest('ul');
+      target_column = $ul.prop('id');
+      target_tagged = $ul.closest('.selects').hasClass('tagged');
+      if (target_tagged) {
+        if (!$target.hasClass('inserted')) {
+          delete_inserted_row();
+          $inserted_row = $('<li class="inserted"></li>').appendTo($ul);
+        }
+        $inserted_row.text(dragged_selector);
+      } else {
+        target_column = null;
       }
-      if (vals) {
-        data.push.apply(data, vals.split(/\s+/));
+      pos = $target.hasClass('inserted') ? $target.index() : -1;
+      $("#" + current_column).find('li.selected').remove();
+      if (current_column !== 'independent' && current_column !== 'decoration' && current_column !== 'object' && current_column !== 'metainfo') {
+        current_column = null;
       }
-      return data;
+      return $.post(dataset_url + '/step', {
+        previous: current_column,
+        column: target_column,
+        pos: pos,
+        selector: selector
+      }, (function() {
+        return location.reload(true);
+      }));
     };
     dragged_element_original_text = null;
     insert_row_timer = null;
-    $inserted_row = $();
     $dragged = null;
     drop_ok = false;
     dragged_selector = null;
@@ -341,10 +373,10 @@
       var $ul, noselect;
       $('#independent, #decoration, #object, #metainfo').addClass('droppable');
       drop_ok = false;
-      original_column = null;
       $dragged = $(evt.target);
-      noselect = $dragged.hasClass('selected');
       $ul = $dragged.closest('ul');
+      original_column = $ul.prop('id');
+      noselect = $dragged.hasClass('selected');
       $ul.trigger('customselect', {
         li: $dragged,
         noselect: noselect
@@ -355,11 +387,18 @@
       return $dragged.text(dragged_selector);
     });
     $('#independent, #decoration, #object, #metainfo').on('dragstart', 'li', function(evt) {
+      var $ul, noselect;
       drop_ok = false;
       $dragged = $(evt.target);
-      original_column = $dragged.closest('ul').prop('id');
+      $ul = $dragged.closest('ul');
+      original_column = $ul.prop('id');
+      noselect = $dragged.hasClass('selected');
+      $ul.trigger('customselect', {
+        li: $dragged,
+        noselect: noselect
+      });
       dragged_selector = $dragged.text();
-      return $("#tag, #attr, #values, #independent, #decoration, #object, #metainfo").addClass('droppable');
+      return $("#tag, #attr, #word, #independent, #decoration, #object, #metainfo").addClass('droppable');
     });
     $selects.on('drag', 'li', function(evt) {
       if (dragged_element_original_text) {
@@ -387,45 +426,46 @@
       return insert_row_timer = null;
     });
     $selects.on('drop', '.droppable li, .droppable', function(evt) {
-      var $target, $ul, pos, target_column, target_tagged;
       evt.preventDefault();
       evt.stopPropagation();
-      drop_ok = true;
-      $target = $(evt.target);
-      $ul = $target.closest('ul');
-      if (original_column) {
-        $dragged.remove();
-      }
-      target_column = $ul.prop('id');
-      target_tagged = $ul.closest('.selects').hasClass('tagged');
-      if (target_tagged) {
-        if (!$target.hasClass('inserted')) {
-          delete_inserted_row();
-          $inserted_row = $('<li class="inserted"></li>').appendTo($ul);
-        }
-        $inserted_row.text(dragged_selector);
-      } else {
-        target_column = null;
-      }
+      move_selector(dragged_selector, original_column, $(evt.target));
       $inserted_row = $();
-      pos = $target.hasClass('inserted') ? $target.index() : -1;
-      $.post(dataset_url + '/step', {
-        previous: original_column,
-        column: target_column,
-        pos: pos,
-        selector: dragged_selector
-      }, (function() {
-        return location.reload(true);
-      }));
-      return original_column = null;
+      original_column = null;
+      return drop_ok = true;
     });
-    return $selects.on('dragend', function(evt) {
+    $selects.on('dragend', function(evt) {
       $('.droppable').removeClass('droppable');
       if (!drop_ok) {
         delete_inserted_row();
       }
       return clearTimeout(insert_row_timer);
     });
+    $selects.on('keyup', '#tag, #attr, #word, #independent, #decoration, #object, #metainfo', function(evt) {
+      var $target_column, $ul, current_column, effective_current_column, selector, target_column;
+      target_column = COLUMN_KEYCODES[evt.which];
+      if (target_column === void 0) {
+        return;
+      }
+      $ul = $(evt.target);
+      effective_current_column = current_column = $ul.prop('id');
+      if (current_column !== 'independent' && current_column !== 'decoration' && current_column !== 'object' && current_column !== 'metainfo') {
+        effective_current_column = null;
+      }
+      if (!(current_column || target_column)) {
+        return;
+      }
+      if (current_column === 'word' && !$ul.find('li.selected').length) {
+        $ul.trigger('togglecurrent');
+      }
+      selector = effective_current_column ? $ul.find('li.selected').text() : get_selector();
+      $target_column = $("#" + target_column);
+      move_selector(selector, current_column, $target_column);
+      $('<li class="inserted"></li>').text(selector).appendTo($target_column);
+      evt.preventDefault();
+      evt.stopPropagation();
+      return false;
+    });
+    return $tag.focus().find('li:first-child').addClass('selected');
   });
 
 }).call(this);
