@@ -130,11 +130,6 @@ header > div {
 }
 
 /* line 108, ../../assets/sass/step.sass */
-.untagged ul:empty {
-  background-color: #dddddd;
-}
-
-/* line 110, ../../assets/sass/step.sass */
 #frame {
   position: fixed;
   left: 0;
@@ -142,14 +137,14 @@ header > div {
   bottom: 20px;
   right: 0;
 }
-/* line 116, ../../assets/sass/step.sass */
+/* line 114, ../../assets/sass/step.sass */
 #frame iframe {
   height: 100%;
   width: 100%;
   overflow: auto;
 }
 
-/* line 120, ../../assets/sass/step.sass */
+/* line 118, ../../assets/sass/step.sass */
 footer {
   position: fixed;
   left: 0;
