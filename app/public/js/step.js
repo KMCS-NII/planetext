@@ -2,7 +2,7 @@
   var __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
   $(function() {
-    var $attr, $dragged, $inserted_row, $instance, $selects, $tag, $value, $word, COLUMN_KEYCODES, SELECTS, delete_inserted_row, drag_mode, dragged_element_original_text, dragged_selector, drop_ok, fill_instances_by_word, get_selector, insert_row_timer, is_ctrl_down, is_mac, move_selector, move_vertically, num_selects, original_column, scroll_into_view;
+    var $attr, $dragged, $inserted_row, $instance, $selects, $tag, $value, $word, COLUMN_KEYCODES, SELECTS, delete_inserted_row, drag_mode, dragged_element_original_text, dragged_selector, drop_ok, fill_instances_by_word, get_selector, insert_row_timer, is_ctrl_down, is_mac, move_selector, move_vertically, num_selects, original_column, scroll_into_view, submit_changes;
     is_mac = window.navigator.platform === 'MacIntel';
     is_ctrl_down = function(evt) {
       if (is_mac) {
@@ -84,6 +84,12 @@
           return $li.removeClass('selected');
         }
       }
+    });
+    $('#tag, #attr, #word').on('update', function(evt) {
+      return $('#selector').text(get_selector());
+    });
+    $('#independent, #decoration, #object, #metainfo').on('update', function(evt) {
+      return $('#selector').text($(evt.target).find('li.selected').text());
     });
     $selects.on('click', '.uniselect, .multiselect', function(evt) {
       var $ul;
@@ -321,6 +327,11 @@
       selected_words = $word.find('li.selected').map(function() {
         return $(this).text();
       });
+      if (!selected_words.length) {
+        selected_words = $word.find('li.selectcursor').map(function() {
+          return $(this).text();
+        });
+      }
       if (selected_words.length) {
         return "" + selected_tag + "[" + selected_attr + ": " + (selected_words.get().join(' ')) + "]";
       } else if (selected_attr.length) {
@@ -331,7 +342,7 @@
     };
     $inserted_row = $();
     move_selector = function(selector, current_column, $target) {
-      var $ul, pos, target_column, target_tagged;
+      var $ul, change, pos, target_column, target_tagged;
       $ul = $target.closest('ul');
       target_column = $ul.prop('id');
       target_tagged = $ul.closest('.selects').hasClass('tagged');
@@ -349,12 +360,16 @@
       if (current_column !== 'independent' && current_column !== 'decoration' && current_column !== 'object' && current_column !== 'metainfo') {
         current_column = null;
       }
-      return $.post(dataset_url + '/step', {
+      change = {
         previous: current_column,
         column: target_column,
         pos: pos,
         selector: selector
-      }, (function() {
+      };
+      return submit_changes(change);
+    };
+    submit_changes = function(change) {
+      return $.post(dataset_url + '/step', change, (function() {
         return location.reload(true);
       }));
     };
@@ -465,7 +480,7 @@
       evt.stopPropagation();
       return false;
     });
-    return $tag.focus().find('li:first-child').addClass('selected');
+    return $tag.focus().find('li:first-child').addClass('selected').trigger('update');
   });
 
 }).call(this);

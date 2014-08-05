@@ -50,6 +50,11 @@ $ ->
       else if params.ctrl
         $li.removeClass('selected')
 
+  $('#tag, #attr, #word').on 'update', (evt) ->
+    $('#selector').text(get_selector())
+  $('#independent, #decoration, #object, #metainfo').on 'update', (evt) ->
+    $('#selector').text($(evt.target).find('li.selected').text())
+
   $selects.on 'click', '.uniselect, .multiselect', (evt) ->
     evt.stopPropagation()
     $ul = $(evt.target)
@@ -224,6 +229,7 @@ $ ->
     selected_tag = $tag.find('li.selected').text()
     selected_attr = $attr.find('li.selected').text()
     selected_words = $word.find('li.selected').map(-> $(this).text())
+    selected_words = $word.find('li.selectcursor').map(-> $(this).text()) unless selected_words.length
     if selected_words.length
       "#{selected_tag}[#{selected_attr}: #{selected_words.get().join(' ')}]"
     else if selected_attr.length
@@ -250,12 +256,15 @@ $ ->
         -1
     $("##{current_column}").find('li.selected').remove()
     current_column = null unless current_column in ['independent', 'decoration', 'object', 'metainfo']
-    $.post(dataset_url + '/step', {
+    change =
       previous: current_column
       column: target_column
       pos: pos,
       selector: selector
-    }, (->
+    submit_changes(change)
+
+  submit_changes = (change) ->
+    $.post(dataset_url + '/step', change, (->
       location.reload(true)
     ))
 
@@ -336,4 +345,4 @@ $ ->
     evt.preventDefault()
     evt.stopPropagation()
     return false
-  $tag.focus().find('li:first-child').addClass('selected')
+  $tag.focus().find('li:first-child').addClass('selected').trigger('update')
