@@ -14,6 +14,9 @@ html
       ' var dataset_url =
       == JSON.dump(dataset_url)
       | ;
+      ' var app_url =
+      == JSON.dump(app_url)
+      | ;
     script src=url('js/step.js')
     link rel="stylesheet" href=url('css/step.css')
   body
@@ -63,6 +66,12 @@ html
       div
         div Options
         ul id="options"
+          li
+            label for="autosubmit"
+              input#autosubmit type="checkbox" checked=('checked' if autosubmit)
+              | Autosubmit
+            | &nbsp;
+            input type="button" id="submit" value="Submit" disabled=('disabled' if autosubmit)
     #frame
       iframe
     footer

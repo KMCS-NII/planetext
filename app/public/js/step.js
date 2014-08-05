@@ -2,7 +2,7 @@
   var __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
   $(function() {
-    var $attr, $dragged, $inserted_row, $instance, $selects, $tag, $value, $word, COLUMN_KEYCODES, SELECTS, delete_inserted_row, drag_mode, dragged_element_original_text, dragged_selector, drop_ok, fill_instances_by_word, get_selector, insert_row_timer, is_ctrl_down, is_mac, move_selector, move_vertically, num_selects, original_column, scroll_into_view, submit_changes;
+    var $attr, $dragged, $inserted_row, $instance, $selects, $tag, $value, $word, COLUMN_KEYCODES, SELECTS, autosubmit, changes, delete_inserted_row, drag_mode, dragged_element_original_text, dragged_selector, drop_ok, fill_instances_by_word, get_selector, insert_row_timer, is_ctrl_down, is_mac, move_selector, move_vertically, num_selects, original_column, scroll_into_view, submit_changes;
     is_mac = window.navigator.platform === 'MacIntel';
     is_ctrl_down = function(evt) {
       if (is_mac) {
@@ -17,10 +17,15 @@
     $value = $('#value');
     $instance = $('#instance');
     $selects = $('.selects');
+    autosubmit = $('#autosubmit').prop('checked');
+    changes = [];
     fill_instances_by_word = function() {
       var attr, data, index, matching, selected_attr, selected_tag, str, unique_values, _i, _len, _ref;
       matching = null;
       selected_tag = $tag.find('li.selected').text();
+      if (!selected_tag) {
+        return {};
+      }
       selected_attr = $attr.find('li.selected').text();
       attr = unknowns[selected_tag][selected_attr];
       $word.find('li.selected').each(function() {
@@ -152,6 +157,9 @@
       selected_attr = $attr.find('li.selected').text();
       if (selected_attr) {
         selected_tag = $tag.find('li.selected').text();
+        if (!selected_tag) {
+          return;
+        }
         attr = unknowns[selected_tag][selected_attr];
         known = {};
         _results = [];
@@ -256,6 +264,11 @@
           break;
         case 32:
           $this.trigger('togglecurrent');
+          break;
+        case 13:
+          if (!autosubmit) {
+            submit_changes();
+          }
           break;
         default:
           pass_through = true;
@@ -366,12 +379,20 @@
         pos: pos,
         selector: selector
       };
-      return submit_changes(change);
+      changes.push(change);
+      if (autosubmit) {
+        return submit_changes();
+      }
     };
-    submit_changes = function(change) {
-      return $.post(dataset_url + '/step', change, (function() {
+    submit_changes = function() {
+      var data;
+      data = {
+        changes: JSON.stringify(changes)
+      };
+      $.post(dataset_url + '/step', data, (function() {
         return location.reload(true);
       }));
+      return changes = [];
     };
     dragged_element_original_text = null;
     insert_row_timer = null;
@@ -479,6 +500,19 @@
       evt.preventDefault();
       evt.stopPropagation();
       return false;
+    });
+    $('#autosubmit').on('change', function(evt) {
+      autosubmit = $(evt.target).prop('checked');
+      if (!autosubmit) {
+        submit_changes();
+      }
+      $('#submit').prop('disabled', autosubmit);
+      return $.post(app_url + '/config', {
+        autosubmit: autosubmit
+      });
+    });
+    $('#submit').click(function(evt) {
+      return submit_changes();
     });
     return $tag.focus().find('li:first-child').addClass('selected').trigger('update');
   });

@@ -212,11 +212,15 @@ module PlaneText
           }
         }
       else
+        autosubmit = session[:autosubmit]
+        autosubmit = true if autosubmit.nil?
         slim :step, {
           locals: {
             unknowns: unknown_tree(unknown_standoffs),
             selectors: selectors,
-            dataset_url: url("/dataset/#{dataset}")
+            dataset_url: url("/dataset/#{dataset}"),
+            app_url: url("/"),
+            autosubmit: autosubmit
           }
         }
       end
@@ -227,33 +231,43 @@ module PlaneText
       dataset_dir = get_dataset_dir(dataset)
       progress_file = get_progress_file(dataset, session[:session_id])
       progress_data = get_progress_data(progress_file, dataset_dir)
-      pos = params[:pos].to_i
-      selector = params[:selector]
-      column = params[:column]
-      previous = params[:previous]
-      md = /^([^\]\[]+)(?:\[([^:]*)(?::\s*([^\]]*))?\])?/.match(selector)
-      halt 403, "Invalid selector #{selector}" unless md
-      _, tag, attr, values = *md
-      data = [tag, attr, *(values || "").split].compact
-      pp "REQUEST #{column} <- #{previous}"
+      changes = JSON.parse(params[:changes])
+      changes.each do |change|
+        pos = change["pos"].to_i
+        selector = change["selector"]
+        column = change["column"]
+        previous = change["previous"]
+        md = /^([^\]\[]+)(?:\[([^:]*)(?::\s*([^\]]*))?\])?/.match(selector)
+        halt 403, "Invalid selector #{selector}" unless md
+        _, tag, attr, values = *md
+        data = [tag, attr, *(values || "").split].compact
 
-      if previous && !previous.empty?
-        previous = previous.to_sym
-        halt 403, "Invalid origin column #{previous}" unless COLUMNS.include?(previous)
-        deleted = progress_data[:tags][previous].delete(data)
-        progress_data[:processed_files] = [] if deleted
-      end
+        if previous && !previous.empty?
+          previous = previous.to_sym
+          halt 403, "Invalid origin column #{previous}" unless COLUMNS.include?(previous)
+          deleted = progress_data[:tags][previous].delete(data)
+          progress_data[:processed_files] = [] if deleted
+        end
 
-      if column && !column.empty?
-        column = column.to_sym
-        halt 403, "Invalid target column #{column}" unless COLUMNS.include?(column)
-        if pos == -1
-          progress_data[:tags][column] << data
-        else
-          progress_data[:tags][column].insert(pos, data)
+        if column && !column.empty?
+          column = column.to_sym
+          halt 403, "Invalid target column #{column}" unless COLUMNS.include?(column)
+          if pos == -1
+            progress_data[:tags][column] << data
+          else
+            progress_data[:tags][column].insert(pos, data)
+          end
         end
       end
       save_progress_file(progress_file, progress_data)
+      ""
+    end
+
+    post '/config' do
+      params.keep_if { |key, value| %w(autosubmit).include? key }
+      session[:autosubmit] = params[:autosubmit] == "true"
+      pp params
+      pp session
       ""
     end
   end
