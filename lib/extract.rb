@@ -76,7 +76,12 @@ module PaperVu
           # Apparently a bug in Nokogiri makes this necessary:
           gsub(%r{(xmlns="http://www\.w3\.org/1999/xhtml") \1}, "\\1")
         replace!
-        @text = @document.root.content + displacement_text
+        @text =
+          if @document.root
+            @document.root.content + displacement_text
+          else
+            displacement_text
+          end
       end
 
       def select_elements(selectors)

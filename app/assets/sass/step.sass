@@ -6,9 +6,11 @@ $selectheadertbpad: 3px
 $selectheaderrlpad: 2px
 $selectheight: 150px
 $selectleftheaderheight: 25px
+$footer: 20px
 
 $selecttotalheight: $selectheader + $selectheight + 2 * $selectheadertbpad
 $taggedtop: $header + $selecttotalheight
+$frametop: $taggedtop + $selecttotalheight
 
 @mixin vertical($width, $height)
   $lrpad: 4px
@@ -47,12 +49,14 @@ header
   top: $taggedtop
   ul
     background-color: #eeffee
-  #trash
+  #options
     background-color: #ebe0d6
 .leftheader
   @include vertical($selecttotalheight, $selectleftheaderheight)
   @include header()
   font: bold italic 15px sans-serif
+.inserted
+  background-color: #bbbbbb
 .selects
   position: absolute
   left: $selectleftheaderheight
@@ -69,17 +73,18 @@ header
       color: #ffffff
       height: $selectheader
   ul
-    margin: 0
+    margin: -1px
+    border: 1px solid #999999
     padding: 0
     list-item-marker: none
     overflow-y: auto
     width: 100%
     height: $selectheight
     outline: none
+    &.droppable
+      background-color: #dddd66 !important
     &:focus
       background-color: #eeeeff
-    &.disabled
-      background-color: #dddddd
     li
       cursor: default
       padding: 0 $padding
@@ -91,9 +96,32 @@ header
     li.selected
       color: #000000
       background-color: #d4d4d4
-    &:focus li.selected
+    &.uniselect:focus li.selected
       color: #ffffff
       background-color: #2a80df
-iframe
-  width: 100%
-
+    &.multiselect:focus li.selected
+      color: #ffffff
+      background-color: #95c0ef
+    &.multiselect:focus li.selectcursor
+      color: #ffffff
+      background-color: #2a80df
+.untagged ul:empty
+  background-color: #dddddd
+#frame
+  position: fixed
+  left: 0
+  top: $frametop
+  bottom: $footer
+  right: 0
+  iframe
+    height: 100%
+    width: 100%
+    overflow: auto
+footer
+  position: fixed
+  left: 0
+  height: $footer
+  bottom: 0
+  right: 0
+  background-color: #000000
+  color: #ffffff

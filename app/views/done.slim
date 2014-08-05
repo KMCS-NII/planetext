@@ -1,2 +1,14 @@
-| DONE TODO
-= unknown_standoffs.inspect
+doctype html
+html
+  head
+    title PlaneText
+    meta charset="UTF-8"
+    script src="//code.jquery.com/jquery-2.1.1.min.js"
+  body
+    p DONE
+    - selectors.each do |type, type_selectors|
+      dt =type
+      dd
+        ul
+          - type_selectors.each do |selector|
+            li =selector

@@ -157,6 +157,16 @@ module PlaneText
       }
     end
 
+    def to_selector(tag, attr=nil, *values)
+      if !values.empty?
+        "#{tag}[#{attr}: #{values.join(' ')}]"
+      elsif attr
+        "#{tag}[#{attr}]"
+      else
+        "#{tag}"
+      end
+    end
+
     get '/dataset/:dataset' do |dataset|
       dataset_dir = get_dataset_dir(dataset)
       progress_file = get_progress_file(dataset, session[:session_id])
@@ -188,31 +198,63 @@ module PlaneText
       progress_data[:processed_files] = processed_files
       save_progress_file(progress_file, progress_data)
 
-      if processed_files.length == unprocessed_files.length
+      selectors = progress_data[:tags].hmap { |type, selector_list|
+        selector_texts = selector_list.map { |selector_array|
+          to_selector(*selector_array)
+        }
+        [type, selector_texts]
+      }
+
+      if processed_files.length == all_files.length
         slim :done, {
           locals: {
-          }
-        }
-      else
-        selectors = progress_data[:tags].hmap { |type, selector_list|
-          selector_texts = selector_list.map { |tag, attr, *values|
-            if !values.empty?
-              "#{tag}[#{attr}: #{values.join(' ')}]"
-            elsif attr
-              "#{tag}[#{attr}]"
-            else
-              "#{tag}"
-            end
-          }
-          [type, selector_texts]
-        }
-        slim :step, {
-          locals: {
-            unknowns: unknown_tree(unknown_standoffs),
             selectors: selectors
           }
         }
+      else
+        slim :step, {
+          locals: {
+            unknowns: unknown_tree(unknown_standoffs),
+            selectors: selectors,
+            dataset_url: url("/dataset/#{dataset}")
+          }
+        }
       end
+    end
+
+    COLUMNS = [:independent, :decoration, :object, :metainfo]
+    post '/dataset/:dataset/step' do |dataset|
+      dataset_dir = get_dataset_dir(dataset)
+      progress_file = get_progress_file(dataset, session[:session_id])
+      progress_data = get_progress_data(progress_file, dataset_dir)
+      pos = params[:pos].to_i
+      selector = params[:selector]
+      column = params[:column]
+      previous = params[:previous]
+      md = /^([^\]\[]+)(?:\[([^:]*)(?::\s*([^\]]*))?\])?/.match(selector)
+      halt 403, "Invalid selector #{selector}" unless md
+      _, tag, attr, values = *md
+      data = [tag, attr, *(values || "").split].compact
+      pp "REQUEST #{column} <- #{previous}"
+
+      if previous && !previous.empty?
+        previous = previous.to_sym
+        halt 403, "Invalid origin column #{previous}" unless COLUMNS.include?(previous)
+        deleted = progress_data[:tags][previous].delete(data)
+        progress_data[:processed_files] = [] if deleted
+      end
+
+      if column && !column.empty?
+        column = column.to_sym
+        halt 403, "Invalid target column #{column}" unless COLUMNS.include?(column)
+        if pos == -1
+          progress_data[:tags][column] << data
+        else
+          progress_data[:tags][column].insert(pos, data)
+        end
+      end
+      save_progress_file(progress_file, progress_data)
+      ""
     end
   end
 end
