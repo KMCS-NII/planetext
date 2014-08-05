@@ -8,6 +8,8 @@ $ ->
   $value = $('#value')
   $instance = $('#instance')
   $selects = $('.selects')
+  autosubmit = $('#autosubmit').prop('checked')
+  changes = []
 
   fill_instances_by_word = ->
     matching = null
@@ -168,6 +170,8 @@ $ ->
         $this.trigger('movevertically', +1)
       when 32
         $this.trigger('togglecurrent')
+      when 13
+        submit_changes() unless autosubmit
       else
         pass_through = true
     unless pass_through
@@ -261,14 +265,16 @@ $ ->
       column: target_column
       pos: pos,
       selector: selector
-    submit_changes([change])
+    changes.push(change)
+    submit_changes() if autosubmit
 
-  submit_changes = (changes) ->
+  submit_changes = ->
     data =
       changes: JSON.stringify(changes)
     $.post(dataset_url + '/step', data, (->
       location.reload(true)
     ))
+    changes = []
 
   dragged_element_original_text = null
   insert_row_timer = null
@@ -347,4 +353,11 @@ $ ->
     evt.preventDefault()
     evt.stopPropagation()
     return false
+  $('#autosubmit').on 'change', (evt) ->
+    autosubmit = $(evt.target).prop('checked')
+    submit_changes() unless autosubmit
+    $('#submit').prop('disabled', autosubmit)
+    $.post(app_url + '/config', { autosubmit: autosubmit })
+  $('#submit').click (evt) ->
+    submit_changes()
   $tag.focus().find('li:first-child').addClass('selected').trigger('update')

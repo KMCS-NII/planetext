@@ -212,11 +212,15 @@ module PlaneText
           }
         }
       else
+        autosubmit = session[:autosubmit]
+        autosubmit = true if autosubmit.nil?
         slim :step, {
           locals: {
             unknowns: unknown_tree(unknown_standoffs),
             selectors: selectors,
-            dataset_url: url("/dataset/#{dataset}")
+            dataset_url: url("/dataset/#{dataset}"),
+            app_url: url("/"),
+            autosubmit: autosubmit
           }
         }
       end
@@ -256,6 +260,14 @@ module PlaneText
         end
       end
       save_progress_file(progress_file, progress_data)
+      ""
+    end
+
+    post '/config' do
+      params.keep_if { |key, value| %w(autosubmit).include? key }
+      session[:autosubmit] = params[:autosubmit] == "true"
+      pp params
+      pp session
       ""
     end
   end
