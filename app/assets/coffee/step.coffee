@@ -14,6 +14,7 @@ $ ->
   fill_instances_by_word = ->
     matching = null
     selected_tag = $tag.find('li.selected').text()
+    return {} unless selected_tag
     selected_attr = $attr.find('li.selected').text()
     attr = unknowns[selected_tag][selected_attr]
     $word.find('li.selected').each ->
@@ -92,6 +93,7 @@ $ ->
     selected_attr = $attr.find('li.selected').text()
     if selected_attr
       selected_tag = $tag.find('li.selected').text()
+      return unless selected_tag
       attr = unknowns[selected_tag][selected_attr]
       known = {}
       for attr_word of attr[0]

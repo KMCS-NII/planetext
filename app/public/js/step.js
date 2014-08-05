@@ -23,6 +23,9 @@
       var attr, data, index, matching, selected_attr, selected_tag, str, unique_values, _i, _len, _ref;
       matching = null;
       selected_tag = $tag.find('li.selected').text();
+      if (!selected_tag) {
+        return {};
+      }
       selected_attr = $attr.find('li.selected').text();
       attr = unknowns[selected_tag][selected_attr];
       $word.find('li.selected').each(function() {
@@ -154,6 +157,9 @@
       selected_attr = $attr.find('li.selected').text();
       if (selected_attr) {
         selected_tag = $tag.find('li.selected').text();
+        if (!selected_tag) {
+          return;
+        }
         attr = unknowns[selected_tag][selected_attr];
         known = {};
         _results = [];
