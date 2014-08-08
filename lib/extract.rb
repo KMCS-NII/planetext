@@ -54,7 +54,12 @@ module PaperVu
       def initialize(str, opts={})
         str = HTMLEntityMap.replace(str)
         @opts = opts
-        @document = Nokogiri::XML(str, nil, 'UTF-8')
+        @document =
+          if @opts[:as_html]
+            Nokogiri::HTML(str, nil, 'UTF-8')
+          else
+            Nokogiri::XML(str, nil, 'UTF-8')
+          end
         if @opts[:use_xpath]
           @namespaces = @document.collect_namespaces
         else
@@ -72,7 +77,7 @@ module PaperVu
         remove_whitespace!(@document.root) if @opts[:remove_whitespace]
         note_replacements!(@document.root)
         displacement_text = note_displacements!
-        @enriched_xml = @document.root.to_xml.
+        @enriched_xml = @document.root.to_xml(:save_with => Nokogiri::XML::Node::SaveOptions::AS_XML | Nokogiri::XML::Node::SaveOptions::NO_DECLARATION).
           # Apparently a bug in Nokogiri makes this necessary:
           gsub(%r{(xmlns="http://www\.w3\.org/1999/xhtml") \1}, "\\1")
         replace!
