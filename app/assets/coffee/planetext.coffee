@@ -140,17 +140,25 @@ define [
               known[str] = true
       fill_instances_by_word()
 
+    scroll_into_view = ($el) ->
+      third_of_height = $iframe.height() / 3
+      pos = $el.offset().top - $el.scrollTop()
+      $iframe[0].contentWindow.scrollTo(0, Math.max(0, pos - third_of_height))
+
     $instance.on 'update', ->
       selected_instance = $instance.find('li.selected').text()
       if selected_instance
         match = /^(.*) \((\d+)-(\d+)\)$/.exec(selected_instance)
         [_, file, from, to] = match
         paper = new Paper(viewer)
-        paper.load(dataset_url + '/' + file,
+        paper.load(dataset_url + '/' + file, {
           types:
-            Instance: '#ff999940'
+            Instance: '#ff9999ff'
           standoffs:
             [[ 'T1', 'Instance', [[from, to]] ]]
+        }, ($iframe_doc) ->
+          $el = $iframe_doc.find('[kmcs-a]').first()
+          scroll_into_view($el) if $el.length
         )
       else
         $iframe.attr('src', 'about:blank')
@@ -216,18 +224,18 @@ define [
         $li.removeClass(klass)
         $next_li.addClass(klass)
         $ul.trigger('update')
-        scroll_into_view($next_li)
+        scroll_into_ul_view($next_li)
 
-    scroll_into_view = ($li) ->
-      ul = $li.closest('ul')[0]
-      li = $li[0]
-      ul_top = ul.scrollTop
-      ul_bottom = ul_top + ul.clientHeight - li.clientHeight
-      pos = li.offsetTop - ul.offsetTop
-      if pos < ul_top
-        li.scrollIntoView(true)
-      else if pos > ul_bottom
-        li.scrollIntoView(false)
+    scroll_into_ul_view = ($el) ->
+      par = $el.closest('ul')[0]
+      el = $el[0]
+      par_top = par.scrollTop
+      par_bottom = par_top + par.clientHeight - el.clientHeight
+      pos = el.offsetTop - par.offsetTop
+      if pos < par_top
+        el.scrollIntoView(true)
+      else if pos > par_bottom
+        el.scrollIntoView(false)
 
     $selects.on 'movevertically', '.uniselect', (evt, dir) ->
       move_vertically($(this), dir, 'selected')

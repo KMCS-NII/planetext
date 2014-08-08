@@ -190,7 +190,11 @@ module PlaneText
       unprocessed_files.each do |xml_file_name|
         xml_file = File.absolute_path(xml_file_name, dataset_dir)
         xml = File.read(xml_file)
-        opts = { file_name: xml_file_name }.merge(selectors)
+        as_html = xml_file_name[-5..-1] == '.html'
+        opts = {
+          file_name: xml_file_name,
+          as_html: as_html
+        }.merge(selectors)
         doc = Extractor.extract(xml, opts)
         unknown_standoffs += doc.unknown_standoffs
         processed_files << xml_file_name if doc.unknown_standoffs.empty?
@@ -226,6 +230,12 @@ module PlaneText
       end
     end
 
+    CONTENT_TYPES = {
+      'html' => 'text/html',
+      'xhtml' => 'application/xhtml+xml',
+      'xml' => 'text/xml'
+    }
+
     get '/dataset/:dataset/:file' do |dataset, filename|
       dataset_dir = get_dataset_dir(dataset)
       file = File.join(dataset_dir, filename)
@@ -233,16 +243,21 @@ module PlaneText
       begin
         content = File.read(file)
         if file =~ /\.(xml|x?html)/
+          extension = $1
           progress_file = get_progress_file(dataset, session[:session_id])
           progress_data = get_progress_data(progress_file, dataset_dir)
+          as_html = extension == 'html'
           opts = {
             displaced: to_xpath(progress_data[:tags][:independent]),
             ignored: to_xpath(progress_data[:tags][:decoration]),
             replaced: to_xpath(progress_data[:tags][:object]),
             removed: to_xpath(progress_data[:tags][:metainfo]),
-            file_name: filename
+            file_name: filename,
+            as_html: as_html
           }
           doc = Extractor.extract(content, opts)
+          puts doc.enriched_xml.class
+          content_type CONTENT_TYPES[extension]
           doc.enriched_xml
         else
           content

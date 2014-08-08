@@ -13,7 +13,7 @@ module PlaneText
   class Extractor
     def self.extract(doc, conf={})
       conf = {
-        remove_whitespace: false,
+        remove_whitespace: true,
         replace_newlines: ' ',
         use_xpath: true,
         opaque_unknowns: true,

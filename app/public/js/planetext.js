@@ -4,7 +4,7 @@
   define(['jquery', 'viewer', 'paper'], function($, Viewer, Paper) {
     var init_step;
     init_step = function() {
-      var $attr, $dragged, $iframe, $inserted_row, $instance, $selects, $tag, $value, $word, COLUMN_KEYCODES, SELECTS, autosubmit, changes, delete_inserted_row, drag_mode, dragged_element_original_text, dragged_selector, drop_ok, fill_instances_by_word, get_selector, insert_row_timer, is_ctrl_down, is_mac, move_selector, move_vertically, num_selects, original_column, scroll_into_view, submit_changes, viewer;
+      var $attr, $dragged, $iframe, $inserted_row, $instance, $selects, $tag, $value, $word, COLUMN_KEYCODES, SELECTS, autosubmit, changes, delete_inserted_row, drag_mode, dragged_element_original_text, dragged_selector, drop_ok, fill_instances_by_word, get_selector, insert_row_timer, is_ctrl_down, is_mac, move_selector, move_vertically, num_selects, original_column, scroll_into_ul_view, scroll_into_view, submit_changes, viewer;
       is_mac = window.navigator.platform === 'MacIntel';
       is_ctrl_down = function(evt) {
         if (is_mac) {
@@ -226,6 +226,12 @@
         }
         return fill_instances_by_word();
       });
+      scroll_into_view = function($el) {
+        var pos, third_of_height;
+        third_of_height = $iframe.height() / 3;
+        pos = $el.offset().top - $el.scrollTop();
+        return $iframe[0].contentWindow.scrollTo(0, Math.max(0, pos - third_of_height));
+      };
       $instance.on('update', function() {
         var file, from, match, paper, selected_instance, to, _;
         selected_instance = $instance.find('li.selected').text();
@@ -235,9 +241,15 @@
           paper = new Paper(viewer);
           return paper.load(dataset_url + '/' + file, {
             types: {
-              Instance: '#ff999940'
+              Instance: '#ff9999ff'
             },
             standoffs: [['T1', 'Instance', [[from, to]]]]
+          }, function($iframe_doc) {
+            var $el;
+            $el = $iframe_doc.find('[kmcs-a]').first();
+            if ($el.length) {
+              return scroll_into_view($el);
+            }
           });
         } else {
           return $iframe.attr('src', 'about:blank');
@@ -307,20 +319,20 @@
           $li.removeClass(klass);
           $next_li.addClass(klass);
           $ul.trigger('update');
-          return scroll_into_view($next_li);
+          return scroll_into_ul_view($next_li);
         }
       };
-      scroll_into_view = function($li) {
-        var li, pos, ul, ul_bottom, ul_top;
-        ul = $li.closest('ul')[0];
-        li = $li[0];
-        ul_top = ul.scrollTop;
-        ul_bottom = ul_top + ul.clientHeight - li.clientHeight;
-        pos = li.offsetTop - ul.offsetTop;
-        if (pos < ul_top) {
-          return li.scrollIntoView(true);
-        } else if (pos > ul_bottom) {
-          return li.scrollIntoView(false);
+      scroll_into_ul_view = function($el) {
+        var el, par, par_bottom, par_top, pos;
+        par = $el.closest('ul')[0];
+        el = $el[0];
+        par_top = par.scrollTop;
+        par_bottom = par_top + par.clientHeight - el.clientHeight;
+        pos = el.offsetTop - par.offsetTop;
+        if (pos < par_top) {
+          return el.scrollIntoView(true);
+        } else if (pos > par_bottom) {
+          return el.scrollIntoView(false);
         }
       };
       $selects.on('movevertically', '.uniselect', function(evt, dir) {

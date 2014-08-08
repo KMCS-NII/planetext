@@ -1,7 +1,7 @@
 guard 'rack', :port => 9292 do
   watch 'Gemfile.lock'
   watch %r{^app/.*rb$}
-  watch %r{^lib/.rb$*}
+  watch %r{^lib/.rb$}
   watch 'config.yaml'
 end
 
