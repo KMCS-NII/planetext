@@ -1,10 +1,10 @@
 (function() {
   var __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
-  define(['jquery'], function($) {
+  define(['jquery', 'viewer', 'paper'], function($, Viewer, Paper) {
     var init_step;
     init_step = function() {
-      var $attr, $dragged, $inserted_row, $instance, $selects, $tag, $value, $word, COLUMN_KEYCODES, SELECTS, autosubmit, changes, delete_inserted_row, drag_mode, dragged_element_original_text, dragged_selector, drop_ok, fill_instances_by_word, get_selector, insert_row_timer, is_ctrl_down, is_mac, move_selector, move_vertically, num_selects, original_column, scroll_into_view, submit_changes;
+      var $attr, $dragged, $iframe, $inserted_row, $instance, $selects, $tag, $value, $word, COLUMN_KEYCODES, SELECTS, autosubmit, changes, delete_inserted_row, drag_mode, dragged_element_original_text, dragged_selector, drop_ok, fill_instances_by_word, get_selector, insert_row_timer, is_ctrl_down, is_mac, move_selector, move_vertically, num_selects, original_column, scroll_into_view, submit_changes, viewer;
       is_mac = window.navigator.platform === 'MacIntel';
       is_ctrl_down = function(evt) {
         if (is_mac) {
@@ -18,9 +18,11 @@
       $word = $('#word');
       $value = $('#value');
       $instance = $('#instance');
+      $iframe = $('iframe');
       $selects = $('.selects');
       autosubmit = $('#autosubmit').prop('checked');
       changes = [];
+      viewer = new Viewer($iframe, app_url + 'css/papervu.css');
       fill_instances_by_word = function() {
         var attr, data, index, matching, selected_attr, selected_tag, str, unique_values, _i, _len, _ref;
         matching = null;
@@ -225,12 +227,20 @@
         return fill_instances_by_word();
       });
       $instance.on('update', function() {
-        var selected_instance;
+        var file, from, match, paper, selected_instance, to, _;
         selected_instance = $instance.find('li.selected').text();
         if (selected_instance) {
-
+          match = /^(.*) \((\d+)-(\d+)\)$/.exec(selected_instance);
+          _ = match[0], file = match[1], from = match[2], to = match[3];
+          paper = new Paper(viewer);
+          return paper.load(dataset_url + '/' + file, {
+            types: {
+              Instance: '#ff999940'
+            },
+            standoffs: [['T1', 'Instance', [[from, to]]]]
+          });
         } else {
-
+          return $iframe.attr('src', 'about:blank');
         }
       });
       SELECTS = ['tag', 'attr', 'word', 'value', 'instance', 'independent', 'decoration', 'object', 'metainfo'];

@@ -226,6 +226,32 @@ module PlaneText
       end
     end
 
+    get '/dataset/:dataset/:file' do |dataset, filename|
+      dataset_dir = get_dataset_dir(dataset)
+      file = File.join(dataset_dir, filename)
+      ensure_sandboxed(file, dataset_dir)
+      begin
+        content = File.read(file)
+        if file =~ /\.(xml|x?html)/
+          progress_file = get_progress_file(dataset, session[:session_id])
+          progress_data = get_progress_data(progress_file, dataset_dir)
+          opts = {
+            displaced: to_xpath(progress_data[:tags][:independent]),
+            ignored: to_xpath(progress_data[:tags][:decoration]),
+            replaced: to_xpath(progress_data[:tags][:object]),
+            removed: to_xpath(progress_data[:tags][:metainfo]),
+            file_name: filename
+          }
+          doc = Extractor.extract(content, opts)
+          doc.enriched_xml
+        else
+          content
+        end
+      rescue Errno::ENOENT
+        halt 404, 'Not found'
+      end
+    end
+
     COLUMNS = [:independent, :decoration, :object, :metainfo]
     post '/dataset/:dataset/step' do |dataset|
       dataset_dir = get_dataset_dir(dataset)

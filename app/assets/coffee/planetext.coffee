@@ -1,7 +1,11 @@
 define [
   'jquery'
+  'viewer'
+  'paper'
 ], (
   $
+  Viewer
+  Paper
 ) ->
 
   init_step = ->
@@ -13,9 +17,11 @@ define [
     $word = $('#word')
     $value = $('#value')
     $instance = $('#instance')
+    $iframe = $('iframe')
     $selects = $('.selects')
     autosubmit = $('#autosubmit').prop('checked')
     changes = []
+    viewer = new Viewer($iframe, app_url + 'css/papervu.css')
 
     fill_instances_by_word = ->
       matching = null
@@ -137,9 +143,17 @@ define [
     $instance.on 'update', ->
       selected_instance = $instance.find('li.selected').text()
       if selected_instance
-        # TODO show the instance
+        match = /^(.*) \((\d+)-(\d+)\)$/.exec(selected_instance)
+        [_, file, from, to] = match
+        paper = new Paper(viewer)
+        paper.load(dataset_url + '/' + file,
+          types:
+            Instance: '#ff999940'
+          standoffs:
+            [[ 'T1', 'Instance', [[from, to]] ]]
+        )
       else
-        # TODO clear the instance
+        $iframe.attr('src', 'about:blank')
 
     SELECTS = [
       'tag',
