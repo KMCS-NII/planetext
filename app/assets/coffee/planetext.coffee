@@ -164,14 +164,14 @@ define [
         $iframe.attr('src', 'about:blank')
 
     SELECTS = [
-      'tag',
-      'attr',
-      'word',
-      'value',
-      'instance',
-      'independent',
-      'decoration',
-      'object',
+      'tag'
+      'attr'
+      'word'
+      'value'
+      'instance'
+      'independent'
+      'decoration'
+      'object'
       'metainfo'
     ]
     COLUMN_KEYCODES =
