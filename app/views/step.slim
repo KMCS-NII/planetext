@@ -3,18 +3,30 @@ html
   head
     title PlaneText
     meta charset="UTF-8"
-    script src="//code.jquery.com/jquery-2.1.1.min.js"
-    script
-      ' var unknowns =
-      == JSON.dump(unknowns)
-      | ;
-      ' var selectors =
-      == JSON.dump(selectors)
-      | ;
-      ' var dataset_url =
-      == JSON.dump(dataset_url)
-      | ;
-    script src=url('js/step.js')
+    // set up constants
+    // load require.js and set up dependencies
+    // both with local fallbacks if CDN is down
+    javascript:
+      var unknowns = #{{JSON.dump(unknowns)}};
+      var selectors = #{{JSON.dump(selectors)}};
+      var dataset_url = #{{JSON.dump(dataset_url)}};
+      var app_url = #{{JSON.dump(app_url)}};
+      var require = {
+        baseUrl: app_url + 'js',
+        paths: {
+          jquery: [
+            '//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min',
+            'lib/jquery.min',
+          ],
+        },
+      };
+    script src="//cdnjs.cloudflare.com/ajax/libs/require.js/2.1.14/require.min.js"
+    javascript:
+      window.requirejs || document.write('<script src="#{url('js/lib/require.min.js')}">\x3C/script>')
+    javascript:
+      require(['planetext'], function(PlaneText) {
+        PlaneText.init_step();
+      })
     link rel="stylesheet" href=url('css/step.css')
   body
     header
@@ -63,6 +75,12 @@ html
       div
         div Options
         ul id="options"
+          li
+            label for="autosubmit"
+              input#autosubmit type="checkbox" checked=('checked' if autosubmit)
+              | Autosubmit
+            | &nbsp;
+            input type="button" id="submit" value="Submit" disabled=('disabled' if autosubmit)
     #frame
       iframe
     footer
