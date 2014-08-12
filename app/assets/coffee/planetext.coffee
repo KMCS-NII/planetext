@@ -29,7 +29,9 @@ define [
       return {} unless selected_tag
       selected_attr = $attr.find('li.selected').text()
       attr = unknowns[selected_tag][selected_attr]
-      $word.find('li.selected').each ->
+      words = $word.find('li.selected')
+      words = $word.find('li.selectcursor') unless words.length
+      words.each ->
         word = this.textContent
         word_instances = attr[0][word]
         if matching
@@ -45,6 +47,7 @@ define [
         str = "#{data[2]} (#{data[0]}-#{data[1]})"
         $('<li>').text(str).appendTo($instance)
         unique_values[attr[1][index][3]] = true
+      $instance.children().first().addClass('selected')
       unique_values
 
     $selects.on 'customselect', '.uniselect', (evt, params) ->
@@ -97,6 +100,7 @@ define [
             unless known[str]
               $('<li>').text(str).appendTo($instance)
               known[str] = true
+      delay_update_instances()
 
     $attr.on 'update', (evt) ->
       $word.empty()
@@ -116,6 +120,7 @@ define [
             unless known[str]
               $('<li>').text(str).appendTo($instance)
               known[str] = true
+      delay_update_instances()
 
     $word.on 'update', ->
       $value.empty()
@@ -123,6 +128,7 @@ define [
       unique_values = fill_instances_by_word()
       for value in Object.keys(unique_values)
         $('<li>').text(value).appendTo($value)
+      delay_update_instances()
 
     $value.on 'update', ->
       $instance.empty()
@@ -139,6 +145,15 @@ define [
               $('<li>').text(str).appendTo($instance)
               known[str] = true
       fill_instances_by_word()
+      delay_update_instances()
+
+    delay_update_timer = null
+    delay_update_instances = ->
+      clearTimeout(delay_update_timer)
+      delay_update_timer = setTimeout(
+        ->
+          $instance.trigger('update')
+        , 300)
 
     scroll_into_view = ($el) ->
       third_of_height = $iframe.height() / 3
@@ -147,6 +162,7 @@ define [
 
     $instance.on 'update', ->
       selected_instance = $instance.find('li.selected').text()
+      selected_instance = $instance.find('li').first().text() unless selected_instance
       if selected_instance
         match = /^(.*) \((\d+)-(\d+)\)$/.exec(selected_instance)
         [_, file, from, to] = match

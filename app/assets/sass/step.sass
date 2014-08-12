@@ -7,10 +7,12 @@ $selectheaderrlpad: 2px
 $selectheight: 100px
 $selectleftheaderheight: 25px
 $footer: 20px
+$tagtextheight: 20px
 
 $selecttotalheight: $selectheader + $selectheight + 2 * $selectheadertbpad
 $taggedtop: $header + $selecttotalheight
-$frametop: $taggedtop + $selecttotalheight
+$tagtexttop: $taggedtop + $selecttotalheight
+$frametop: $tagtexttop + $tagtextheight
 
 @mixin vertical($width, $height)
   $lrpad: 4px
@@ -107,14 +109,22 @@ header
       background-color: #2a80df
 #frame
   position: fixed
-  left: 0
   top: $frametop
   bottom: $footer
+  left: 0
   right: 0
   iframe
     height: 100%
     width: 100%
     overflow: auto
+#tagtext
+  position: fixed
+  top: $tagtexttop
+  height: $tagtextheight
+  left: 0
+  right: 0
+  background-color: #000000
+  color: #ffffff
 footer
   position: fixed
   left: 0
@@ -123,3 +133,5 @@ footer
   right: 0
   background-color: #000000
   color: #ffffff
+#progress
+  float: right

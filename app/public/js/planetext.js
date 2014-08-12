@@ -4,7 +4,7 @@
   define(['jquery', 'viewer', 'paper'], function($, Viewer, Paper) {
     var init_step;
     init_step = function() {
-      var $attr, $dragged, $iframe, $inserted_row, $instance, $selects, $tag, $value, $word, COLUMN_KEYCODES, SELECTS, autosubmit, changes, delete_inserted_row, drag_mode, dragged_element_original_text, dragged_selector, drop_ok, fill_instances_by_word, get_selector, insert_row_timer, is_ctrl_down, is_mac, move_selector, move_vertically, num_selects, original_column, scroll_into_ul_view, scroll_into_view, submit_changes, viewer;
+      var $attr, $dragged, $iframe, $inserted_row, $instance, $selects, $tag, $value, $word, COLUMN_KEYCODES, SELECTS, autosubmit, changes, delay_update_instances, delay_update_timer, delete_inserted_row, drag_mode, dragged_element_original_text, dragged_selector, drop_ok, fill_instances_by_word, get_selector, insert_row_timer, is_ctrl_down, is_mac, move_selector, move_vertically, num_selects, original_column, scroll_into_ul_view, scroll_into_view, submit_changes, viewer;
       is_mac = window.navigator.platform === 'MacIntel';
       is_ctrl_down = function(evt) {
         if (is_mac) {
@@ -24,7 +24,7 @@
       changes = [];
       viewer = new Viewer($iframe, app_url + 'css/papervu.css');
       fill_instances_by_word = function() {
-        var attr, data, index, matching, selected_attr, selected_tag, str, unique_values, _i, _len, _ref;
+        var attr, data, index, matching, selected_attr, selected_tag, str, unique_values, words, _i, _len, _ref;
         matching = null;
         selected_tag = $tag.find('li.selected').text();
         if (!selected_tag) {
@@ -32,7 +32,11 @@
         }
         selected_attr = $attr.find('li.selected').text();
         attr = unknowns[selected_tag][selected_attr];
-        $word.find('li.selected').each(function() {
+        words = $word.find('li.selected');
+        if (!words.length) {
+          words = $word.find('li.selectcursor');
+        }
+        words.each(function() {
           var index, word, word_instances, _i, _len, _ref, _results, _results1;
           word = this.textContent;
           word_instances = attr[0][word];
@@ -68,6 +72,7 @@
           $('<li>').text(str).appendTo($instance);
           unique_values[attr[1][index][3]] = true;
         }
+        $instance.children().first().addClass('selected');
         return unique_values;
       };
       $selects.on('customselect', '.uniselect', function(evt, params) {
@@ -118,7 +123,7 @@
         return $ul.trigger('update');
       });
       $tag.on('update', function(evt) {
-        var attr, attr_name, data, known, selected_tag, str, _ref, _results;
+        var attr, attr_name, data, known, selected_tag, str, _i, _len, _ref, _ref1;
         $attr.empty();
         $word.empty();
         $value.empty();
@@ -127,34 +132,26 @@
         if (selected_tag) {
           known = {};
           _ref = unknowns[selected_tag];
-          _results = [];
           for (attr_name in _ref) {
             attr = _ref[attr_name];
             if (attr_name !== '') {
               $('<li draggable="true">').text(attr_name).appendTo($attr);
             }
-            _results.push((function() {
-              var _i, _len, _ref1, _results1;
-              _ref1 = attr[1];
-              _results1 = [];
-              for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
-                data = _ref1[_i];
-                str = "" + data[2] + " (" + data[0] + "-" + data[1] + ")";
-                if (!known[str]) {
-                  $('<li>').text(str).appendTo($instance);
-                  _results1.push(known[str] = true);
-                } else {
-                  _results1.push(void 0);
-                }
+            _ref1 = attr[1];
+            for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+              data = _ref1[_i];
+              str = "" + data[2] + " (" + data[0] + "-" + data[1] + ")";
+              if (!known[str]) {
+                $('<li>').text(str).appendTo($instance);
+                known[str] = true;
               }
-              return _results1;
-            })());
+            }
           }
-          return _results;
         }
+        return delay_update_instances();
       });
       $attr.on('update', function(evt) {
-        var attr, attr_word, data, index, known, selected_attr, selected_tag, str, _results;
+        var attr, attr_word, data, index, known, selected_attr, selected_tag, str, _i, _len, _ref;
         $word.empty();
         $value.empty();
         $instance.empty();
@@ -166,42 +163,33 @@
           }
           attr = unknowns[selected_tag][selected_attr];
           known = {};
-          _results = [];
           for (attr_word in attr[0]) {
             $('<li draggable="true">').text(attr_word).appendTo($word);
-            _results.push((function() {
-              var _i, _len, _ref, _results1;
-              _ref = attr[0][attr_word];
-              _results1 = [];
-              for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-                index = _ref[_i];
-                data = attr[1][index];
-                str = "" + data[2] + " (" + data[0] + "-" + data[1] + ")";
-                if (!known[str]) {
-                  $('<li>').text(str).appendTo($instance);
-                  _results1.push(known[str] = true);
-                } else {
-                  _results1.push(void 0);
-                }
+            _ref = attr[0][attr_word];
+            for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+              index = _ref[_i];
+              data = attr[1][index];
+              str = "" + data[2] + " (" + data[0] + "-" + data[1] + ")";
+              if (!known[str]) {
+                $('<li>').text(str).appendTo($instance);
+                known[str] = true;
               }
-              return _results1;
-            })());
+            }
           }
-          return _results;
         }
+        return delay_update_instances();
       });
       $word.on('update', function() {
-        var unique_values, value, _i, _len, _ref, _results;
+        var unique_values, value, _i, _len, _ref;
         $value.empty();
         $instance.empty();
         unique_values = fill_instances_by_word();
         _ref = Object.keys(unique_values);
-        _results = [];
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
           value = _ref[_i];
-          _results.push($('<li>').text(value).appendTo($value));
+          $('<li>').text(value).appendTo($value);
         }
-        return _results;
+        return delay_update_instances();
       });
       $value.on('update', function() {
         var attr, data, known, selected_attr, selected_tag, selected_value, str, _i, _len, _ref;
@@ -224,8 +212,16 @@
             }
           }
         }
-        return fill_instances_by_word();
+        fill_instances_by_word();
+        return delay_update_instances();
       });
+      delay_update_timer = null;
+      delay_update_instances = function() {
+        clearTimeout(delay_update_timer);
+        return delay_update_timer = setTimeout(function() {
+          return $instance.trigger('update');
+        }, 300);
+      };
       scroll_into_view = function($el) {
         var pos, third_of_height;
         third_of_height = $iframe.height() / 3;
@@ -235,6 +231,9 @@
       $instance.on('update', function() {
         var file, from, match, paper, selected_instance, to, _;
         selected_instance = $instance.find('li.selected').text();
+        if (!selected_instance) {
+          selected_instance = $instance.find('li').first().text();
+        }
         if (selected_instance) {
           match = /^(.*) \((\d+)-(\d+)\)$/.exec(selected_instance);
           _ = match[0], file = match[1], from = match[2], to = match[3];

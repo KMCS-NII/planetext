@@ -81,7 +81,10 @@ html
               | Autosubmit
             | &nbsp;
             input type="button" id="submit" value="Submit" disabled=('disabled' if autosubmit)
+    #tagtext
     #frame
       iframe
     footer
+      #progress
+        | #{progress[:done]}/#{progress[:total]}
       #selector

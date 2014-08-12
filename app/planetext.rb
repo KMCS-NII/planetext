@@ -9,17 +9,11 @@ require 'fileutils'
 require 'set'
 
 module PlaneText
-  module HashRefinement
-    refine Hash do
-      def hmap
-        Hash[self.map {|k, v| yield k, v }]
-      end
-    end
-  end
+
 
 
   class App < Sinatra::Application
-    using HashRefinement
+    include PlaneText::Common
 
     set :haml, format: :html5
     set :method_override, true
@@ -45,7 +39,7 @@ module PlaneText
 
     get '/' do
       # choose dataset -> dataset/:name
-      # import dataset -> AJAX PUT dataset/:name, client redirect
+      # import dataset -> AJAX PUT dataset/:name, client redirect TODO
       # delete dataset -> AJAX DELETE datasets/:name
       datasets = Dir[File.join(Config.datadir, '*')].
         map { |file| File.basename(file) }
@@ -74,33 +68,6 @@ module PlaneText
       ensure_sandboxed(session_dir, session_root)
       FileUtils.mkdir_p(session_dir)
       File.join(session_dir, dataset)
-    end
-
-    def save_progress_file(progress_file, progress_data)
-      File.write(progress_file, YAML.dump(progress_data))
-    end
-
-    def get_progress_data(progress_file, dataset_dir)
-      # find the user data pertaining to current dataset
-      if File.exist?(progress_file)
-        YAML.load(File.read(progress_file))
-      else
-        {
-          processed_files: [],
-          tags: {
-            independent: [],
-            decoration: [],
-            object: [],
-            metainfo: []
-          }
-        }
-      end
-    end
-
-    class JSONableSortedSet < SortedSet
-      def to_json(*args)
-        to_a.to_json(*args)
-      end
     end
 
     def insert_standoff_data(unknowns, standoff, attr_name)
@@ -143,73 +110,15 @@ module PlaneText
       }
     end
 
-    def to_xpath(selectors)
-      selectors.map { |tag, attr, *values|
-        xpath = "//#{tag}"
-        if !values.empty?
-          values.each do |value|
-            xpath += "[contains(concat(' ', normalize-space(@#{attr}), ' '), ' #{value} ')]"
-          end
-        elsif attr
-          xpath += "[@#{attr}]"
-        end
-        xpath
-      }
-    end
-
-    def to_selector(tag, attr=nil, *values)
-      if !values.empty?
-        "#{tag}[#{attr}: #{values.join(' ')}]"
-      elsif attr
-        "#{tag}[#{attr}]"
-      else
-        "#{tag}"
-      end
-    end
-
     get '/dataset/:dataset' do |dataset|
       dataset_dir = get_dataset_dir(dataset)
       progress_file = get_progress_file(dataset, session[:session_id])
-      progress_data = get_progress_data(progress_file, dataset_dir)
-
-      processed_files = []
-      unknown_standoffs = []
-      processed_files = progress_data[:processed_files]
-      all_files = Dir.chdir(dataset_dir) { |dir|
-        Dir['**/*.{xml,xhtml,html}']
-      }
-      unprocessed_files = all_files - processed_files
       limit = Config.webapp.files_at_once || 1
-      unprocessed_files = unprocessed_files.take(limit) if limit > 0
-      selectors = {
-        displaced: to_xpath(progress_data[:tags][:independent]),
-        ignored: to_xpath(progress_data[:tags][:decoration]),
-        replaced: to_xpath(progress_data[:tags][:object]),
-        removed: to_xpath(progress_data[:tags][:metainfo])
-      }
-      unprocessed_files.each do |xml_file_name|
-        xml_file = File.absolute_path(xml_file_name, dataset_dir)
-        xml = File.read(xml_file)
-        as_html = xml_file_name[-5..-1] == '.html'
-        opts = {
-          file_name: xml_file_name,
-          as_html: as_html
-        }.merge(selectors)
-        doc = Extractor.extract(xml, opts)
-        unknown_standoffs += doc.unknown_standoffs
-        processed_files << xml_file_name if doc.unknown_standoffs.empty?
-      end
-      progress_data[:processed_files] = processed_files
-      save_progress_file(progress_file, progress_data)
 
-      selectors = progress_data[:tags].hmap { |type, selector_list|
-        selector_texts = selector_list.map { |selector_array|
-          to_selector(*selector_array)
-        }
-        [type, selector_texts]
-      }
+      selectors, unknown_standoffs, processed_files, all_files =
+        *find_unknowns(dataset_dir, progress_file, limit)
 
-      if processed_files.length == all_files.length
+      if processed_files == all_files
         slim :done, {
           locals: {
             selectors: selectors
@@ -224,7 +133,11 @@ module PlaneText
             selectors: selectors,
             dataset_url: url("/dataset/#{dataset}"),
             app_url: url("/"),
-            autosubmit: autosubmit
+            autosubmit: autosubmit,
+            progress: {
+              done: processed_files,
+              total: all_files
+            }
           }
         }
       end
@@ -245,7 +158,7 @@ module PlaneText
         if file =~ /\.(xml|x?html)/
           extension = $1
           progress_file = get_progress_file(dataset, session[:session_id])
-          progress_data = get_progress_data(progress_file, dataset_dir)
+          progress_data = get_progress_data(progress_file)
           as_html = extension == 'html'
           opts = {
             displaced: to_xpath(progress_data[:tags][:independent]),
@@ -255,7 +168,7 @@ module PlaneText
             file_name: filename,
             as_html: as_html
           }
-          doc = Extractor.extract(content, opts)
+          doc = extract(content, opts)
           puts doc.enriched_xml.class
           content_type CONTENT_TYPES[extension]
           doc.enriched_xml
@@ -269,9 +182,9 @@ module PlaneText
 
     COLUMNS = [:independent, :decoration, :object, :metainfo]
     post '/dataset/:dataset/step' do |dataset|
-      dataset_dir = get_dataset_dir(dataset)
+      get_dataset_dir(dataset) # for ensure_sandboxed
       progress_file = get_progress_file(dataset, session[:session_id])
-      progress_data = get_progress_data(progress_file, dataset_dir)
+      progress_data = get_progress_data(progress_file)
       changes = JSON.parse(params[:changes])
       changes.each do |change|
         pos = change["pos"].to_i
@@ -307,8 +220,6 @@ module PlaneText
     post '/config' do
       params.keep_if { |key, value| %w(autosubmit).include? key }
       session[:autosubmit] = params[:autosubmit] == "true"
-      pp params
-      pp session
       ""
     end
   end
