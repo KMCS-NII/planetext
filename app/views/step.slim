@@ -79,8 +79,15 @@ html
             label for="autosubmit"
               input#autosubmit type="checkbox" checked=('checked' if autosubmit)
               | Autosubmit
-            | &nbsp;
+          li
             input type="button" id="submit" value="Submit" disabled=('disabled' if autosubmit)
+          li
+            form id="doc_limit_form" action="#"
+              | Docs&nbsp;
+              input type="number" id="doc_limit" min="0" value=doc_limit
+              input type="submit" value="Set"
+          li
+            a href="#{dataset_url}/progress" Progress File
     #tagtext
     #frame
       iframe

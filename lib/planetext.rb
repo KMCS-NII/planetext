@@ -83,12 +83,11 @@ module PlaneText
     def find_unknowns(dataset_dir, progress_file, limit=1)
       progress_data = get_progress_data(progress_file)
 
-      processed_files = []
       unknown_standoffs = []
-      processed_files = progress_data[:processed_files]
       all_files = Dir.chdir(dataset_dir) { |dir|
         Dir['**/*.{xml,xhtml,html}']
       }
+      processed_files = progress_data[:processed_files] || all_files
       unprocessed_files = all_files - processed_files
       unprocessed_files = unprocessed_files.take(limit) if limit > 0
       selectors = {
@@ -109,7 +108,11 @@ module PlaneText
         unknown_standoffs += doc.unknown_standoffs
         processed_files << xml_file_name if doc.unknown_standoffs.empty?
       end
-      progress_data[:processed_files] = processed_files
+      if processed_files.length == all_files.length
+        progress_data.delete(:proccessed_files)
+      else
+        progress_data[:processed_files] = processed_files
+      end
       save_progress_file(progress_file, progress_data)
 
       selectors = progress_data[:tags].hmap { |type, selector_list|

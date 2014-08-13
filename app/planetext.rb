@@ -113,10 +113,10 @@ module PlaneText
     get '/dataset/:dataset' do |dataset|
       dataset_dir = get_dataset_dir(dataset)
       progress_file = get_progress_file(dataset, session[:session_id])
-      limit = Config.webapp.files_at_once || 1
+      doc_limit = session[:doc_limit] || 5
 
       selectors, unknown_standoffs, processed_files, all_files =
-        *find_unknowns(dataset_dir, progress_file, limit)
+        *find_unknowns(dataset_dir, progress_file, doc_limit)
 
       if processed_files == all_files
         slim :done, {
@@ -134,6 +134,7 @@ module PlaneText
             dataset_url: url("/dataset/#{dataset}"),
             app_url: url("/"),
             autosubmit: autosubmit,
+            doc_limit: doc_limit,
             progress: {
               done: processed_files,
               total: all_files
@@ -149,7 +150,7 @@ module PlaneText
       'xml' => 'text/xml'
     }
 
-    get '/dataset/:dataset/:file' do |dataset, filename|
+    get '/dataset/:dataset/file/:file' do |dataset, filename|
       dataset_dir = get_dataset_dir(dataset)
       file = File.join(dataset_dir, filename)
       ensure_sandboxed(file, dataset_dir)
@@ -178,6 +179,14 @@ module PlaneText
       rescue Errno::ENOENT
         halt 404, 'Not found'
       end
+    end
+
+    get '/dataset/:dataset/progress' do |dataset|
+      get_dataset_dir(dataset) # for ensure_sandboxed
+      progress_file = get_progress_file(dataset, session[:session_id])
+      content_type 'application/x-yaml'
+      attachment dataset + ".yaml"
+      File.read(progress_file)
     end
 
     COLUMNS = [:independent, :decoration, :object, :metainfo]
@@ -218,8 +227,8 @@ module PlaneText
     end
 
     post '/config' do
-      params.keep_if { |key, value| %w(autosubmit).include? key }
-      session[:autosubmit] = params[:autosubmit] == "true"
+      session[:autosubmit] = params[:autosubmit] == "true" if params[:autosumbit]
+      session[:doc_limit] = params[:doc_limit].to_i if params[:doc_limit]
       ""
     end
   end

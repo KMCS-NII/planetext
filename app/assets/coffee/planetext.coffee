@@ -167,7 +167,7 @@ define [
         match = /^(.*) \((\d+)-(\d+)\)$/.exec(selected_instance)
         [_, file, from, to] = match
         paper = new Paper(viewer)
-        paper.load(dataset_url + '/' + file, {
+        paper.load(dataset_url + '/file/' + file, {
           types:
             Instance: '#ff9999ff'
           standoffs:
@@ -202,7 +202,7 @@ define [
       51: 'object'       # 3
       52: 'metainfo'     # 4
     num_selects = SELECTS.length
-    $('.selects ul').on 'keydown', (evt) ->
+    $('.selects ul:not(#options)').on 'keydown', (evt) ->
       pass_through = false
       $this = $(this)
       switch evt.keyCode
@@ -404,6 +404,12 @@ define [
       submit_changes() unless autosubmit
       $('#submit').prop('disabled', autosubmit)
       $.post(app_url + '/config', { autosubmit: autosubmit })
+    $('#doc_limit_form').on 'submit', (evt) ->
+      doc_limit = $('#doc_limit').val()
+      $.post(app_url + '/config', { doc_limit: doc_limit }, ->
+        submit_changes()
+      )
+      false
     $('#submit').click (evt) ->
       submit_changes()
     $tag.focus().find('li:first-child').addClass('selected').trigger('update')

@@ -238,7 +238,7 @@
           match = /^(.*) \((\d+)-(\d+)\)$/.exec(selected_instance);
           _ = match[0], file = match[1], from = match[2], to = match[3];
           paper = new Paper(viewer);
-          return paper.load(dataset_url + '/' + file, {
+          return paper.load(dataset_url + '/file/' + file, {
             types: {
               Instance: '#ff9999ff'
             },
@@ -268,7 +268,7 @@
         52: 'metainfo'
       };
       num_selects = SELECTS.length;
-      $('.selects ul').on('keydown', function(evt) {
+      $('.selects ul:not(#options)').on('keydown', function(evt) {
         var $this, pass_through;
         pass_through = false;
         $this = $(this);
@@ -533,6 +533,16 @@
         return $.post(app_url + '/config', {
           autosubmit: autosubmit
         });
+      });
+      $('#doc_limit_form').on('submit', function(evt) {
+        var doc_limit;
+        doc_limit = $('#doc_limit').val();
+        $.post(app_url + '/config', {
+          doc_limit: doc_limit
+        }, function() {
+          return submit_changes();
+        });
+        return false;
       });
       $('#submit').click(function(evt) {
         return submit_changes();
