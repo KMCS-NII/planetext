@@ -5,9 +5,12 @@ require 'optparse'
 require_relative '../lib/planetext'
 
 module PlaneText
+  class NoConfigError < StandardError; end
+  extend PlaneText::Common
+
   option_parser = OptionParser.new do |opts|
     planetext = File.basename($0)
-    opts.banner = "Usage: #{planetext} [options] ..." # TODO
+    opts.banner = "Usage: #{planetext} [options] <config.yaml> <files...>" # TODO
     opts.separator ""
     
     opts.on( '-h', '--help', 'Display this help' ) do
@@ -16,14 +19,23 @@ module PlaneText
     end
   end
 
-  begin
-    option_parser.parse!
-  rescue OptionParser::InvalidOption => x
-    STDERR.puts "Error: #{x}"
-    exit(1)
-  end
+  progress_file =
+    begin
+      option_parser.parse!
+      ARGV.shift or
+        raise NoConfigError.new("config not specified")
+    rescue OptionParser::InvalidOption, NoConfigError => x
+      STDERR.puts "Error: #{x}"
+      exit(1)
+    end
 
-  Extractor.new.extract({
-  })
+  progress_data = get_progress_data(progress_file)
 end
+
+
+
+# TODO
+# planetext config.yaml directory
+# planetext config.yaml directory -d "xmlns[class: main]" -l 5
+# planetext config.yaml directory -O outputdirectory
 

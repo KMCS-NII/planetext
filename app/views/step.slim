@@ -7,8 +7,8 @@ html
     // load require.js and set up dependencies
     // both with local fallbacks if CDN is down
     javascript:
-      var unknowns = #{{JSON.dump(unknowns)}};
-      var selectors = #{{JSON.dump(selectors)}};
+      var unknowns = #{{JSON.dump(unknown.tree)}};
+      var selectors = #{{JSON.dump(unknown.selectors)}};
       var dataset_url = #{{JSON.dump(dataset_url)}};
       var app_url = #{{JSON.dump(app_url)}};
       var require = {
@@ -36,7 +36,7 @@ html
       div
         div Tag
         ul id="tag" tabindex="1" class="uniselect"
-          - unknowns.each do |tag_name, _|
+          - unknown.tree.each do |tag_name, _|
             li draggable="true" #{tag_name}
       div
         div Attribute
@@ -55,22 +55,22 @@ html
       div
         div Independent
         ul id="independent" tabindex="6" class="uniselect"
-          - selectors[:independent].each do |selector|
+          - unknown.selectors[:independent].each do |selector|
             li draggable="true" =selector
       div
         div Decoration
         ul id="decoration" tabindex="7" class="uniselect"
-          - selectors[:decoration].each do |selector|
+          - unknown.selectors[:decoration].each do |selector|
             li draggable="true" =selector
       div
         div Object
         ul id="object" tabindex="8" class="uniselect"
-          - selectors[:object].each do |selector|
+          - unknown.selectors[:object].each do |selector|
             li draggable="true" =selector
       div
         div Metainfo
         ul id="metainfo" tabindex="9" class="uniselect"
-          - selectors[:metainfo].each do |selector|
+          - unknown.selectors[:metainfo].each do |selector|
             li draggable="true" =selector
       div
         div Options
@@ -87,11 +87,11 @@ html
               input type="number" id="doc_limit" min="0" value=doc_limit
               input type="submit" value="Set"
           li
-            a href="#{dataset_url}/progress" Progress File
+            a href="#{dataset_url}/progress" Config file
     #tagtext
     #frame
       iframe
     footer
       #progress
-        | #{progress[:done]}/#{progress[:total]}
+        | #{unknown.done}/#{unknown.total}
       #selector

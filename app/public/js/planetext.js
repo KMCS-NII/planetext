@@ -24,7 +24,7 @@
       changes = [];
       viewer = new Viewer($iframe, app_url + 'css/papervu.css');
       fill_instances_by_word = function() {
-        var attr, data, index, matching, selected_attr, selected_tag, str, unique_values, words, _i, _len, _ref;
+        var $li, attr, data, index, matching, selected_attr, selected_tag, str, unique_values, words, _i, _len, _ref;
         matching = null;
         selected_tag = $tag.find('li.selected').text();
         if (!selected_tag) {
@@ -69,7 +69,10 @@
           index = _ref[_i];
           data = attr[1][index];
           str = "" + data[2] + " (" + data[0] + "-" + data[1] + ")";
-          $('<li>').text(str).appendTo($instance);
+          $li = $('<li>').text(str).appendTo($instance);
+          if (data[0] === data[1]) {
+            $li.addClass('empty');
+          }
           unique_values[attr[1][index][3]] = true;
         }
         $instance.children().first().addClass('selected');
@@ -123,7 +126,7 @@
         return $ul.trigger('update');
       });
       $tag.on('update', function(evt) {
-        var attr, attr_name, data, known, selected_tag, str, _i, _len, _ref, _ref1;
+        var $li, attr, attr_name, data, known, selected_tag, str, _i, _len, _ref, _ref1;
         $attr.empty();
         $word.empty();
         $value.empty();
@@ -142,7 +145,10 @@
               data = _ref1[_i];
               str = "" + data[2] + " (" + data[0] + "-" + data[1] + ")";
               if (!known[str]) {
-                $('<li>').text(str).appendTo($instance);
+                $li = $('<li>').text(str).appendTo($instance);
+                if (data[0] === data[1]) {
+                  $li.addClass('empty');
+                }
                 known[str] = true;
               }
             }
@@ -151,7 +157,7 @@
         return delay_update_instances();
       });
       $attr.on('update', function(evt) {
-        var attr, attr_word, data, index, known, selected_attr, selected_tag, str, _i, _len, _ref;
+        var $li, attr, attr_word, data, index, known, selected_attr, selected_tag, str, _i, _len, _ref;
         $word.empty();
         $value.empty();
         $instance.empty();
@@ -171,7 +177,10 @@
               data = attr[1][index];
               str = "" + data[2] + " (" + data[0] + "-" + data[1] + ")";
               if (!known[str]) {
-                $('<li>').text(str).appendTo($instance);
+                $li = $('<li>').text(str).appendTo($instance);
+                if (data[0] === data[1]) {
+                  $li.addClass('empty');
+                }
                 known[str] = true;
               }
             }
@@ -192,7 +201,7 @@
         return delay_update_instances();
       });
       $value.on('update', function() {
-        var attr, data, known, selected_attr, selected_tag, selected_value, str, _i, _len, _ref;
+        var $li, attr, data, known, selected_attr, selected_tag, selected_value, str, _i, _len, _ref;
         $instance.empty();
         selected_value = $value.find('li.selected').text();
         if (selected_value) {
@@ -206,7 +215,10 @@
             if (data[3] === selected_value) {
               str = "" + data[2] + " (" + data[0] + "-" + data[1] + ")";
               if (!known[str]) {
-                $('<li>').text(str).appendTo($instance);
+                $li = $('<li>').text(str).appendTo($instance);
+                if (data[0] === data[1]) {
+                  $li.addClass('empty');
+                }
                 known[str] = true;
               }
             }

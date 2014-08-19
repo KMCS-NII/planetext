@@ -128,8 +128,16 @@ header > div {
   color: white;
   background-color: #2a80df;
 }
-
 /* line 110, ../../assets/sass/step.sass */
+.selects ul li.selected.empty, .selects ul li.selectcursor.empty {
+  color: #999999;
+}
+/* line 112, ../../assets/sass/step.sass */
+.selects ul li.empty {
+  color: #cccccc;
+}
+
+/* line 114, ../../assets/sass/step.sass */
 #frame {
   position: fixed;
   top: 303px;
@@ -137,14 +145,14 @@ header > div {
   left: 0;
   right: 0;
 }
-/* line 116, ../../assets/sass/step.sass */
+/* line 120, ../../assets/sass/step.sass */
 #frame iframe {
   height: 100%;
   width: 100%;
   overflow: auto;
 }
 
-/* line 120, ../../assets/sass/step.sass */
+/* line 124, ../../assets/sass/step.sass */
 #tagtext {
   position: fixed;
   top: 283px;
@@ -155,7 +163,7 @@ header > div {
   color: white;
 }
 
-/* line 128, ../../assets/sass/step.sass */
+/* line 132, ../../assets/sass/step.sass */
 footer {
   position: fixed;
   left: 0;
@@ -166,12 +174,12 @@ footer {
   color: white;
 }
 
-/* line 136, ../../assets/sass/step.sass */
+/* line 140, ../../assets/sass/step.sass */
 #progress {
   float: right;
 }
 
-/* line 138, ../../assets/sass/step.sass */
+/* line 142, ../../assets/sass/step.sass */
 #doc_limit {
   width: 30px;
 }

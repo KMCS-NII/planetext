@@ -217,7 +217,7 @@ module PaperVu
         @displacements.map do |displacement_name, displaced_data|
           displaced_node, displaced_offset = *displaced_data
           displaced_text = displaced_node.text
-          displacement_mod_name = displacement_name.sub('IND', 'IND_TEXT')[1..-2]
+          displacement_mod_name = @opts[:mark_displacement] ? displacement_name.sub('IND', 'IND_TEXT')[1..-2] : ''
           displaced_header = "\n\n\n#{displacement_mod_name}: "
           displaced_text_all = displaced_header + displaced_text
           displaced_data[2] = @offset + displaced_header.length - displaced_offset

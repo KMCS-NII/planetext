@@ -45,7 +45,8 @@ define [
       for index in Object.keys(matching)
         data = attr[1][index]
         str = "#{data[2]} (#{data[0]}-#{data[1]})"
-        $('<li>').text(str).appendTo($instance)
+        $li = $('<li>').text(str).appendTo($instance)
+        $li.addClass('empty') if data[0] == data[1]
         unique_values[attr[1][index][3]] = true
       $instance.children().first().addClass('selected')
       unique_values
@@ -98,7 +99,8 @@ define [
           for data in attr[1]
             str = "#{data[2]} (#{data[0]}-#{data[1]})"
             unless known[str]
-              $('<li>').text(str).appendTo($instance)
+              $li = $('<li>').text(str).appendTo($instance)
+              $li.addClass('empty') if data[0] == data[1]
               known[str] = true
       delay_update_instances()
 
@@ -118,7 +120,8 @@ define [
             data = attr[1][index]
             str = "#{data[2]} (#{data[0]}-#{data[1]})"
             unless known[str]
-              $('<li>').text(str).appendTo($instance)
+              $li = $('<li>').text(str).appendTo($instance)
+              $li.addClass('empty') if data[0] == data[1]
               known[str] = true
       delay_update_instances()
 
@@ -142,7 +145,8 @@ define [
           if data[3] == selected_value
             str = "#{data[2]} (#{data[0]}-#{data[1]})"
             unless known[str]
-              $('<li>').text(str).appendTo($instance)
+              $li = $('<li>').text(str).appendTo($instance)
+              $li.addClass('empty') if data[0] == data[1]
               known[str] = true
       fill_instances_by_word()
       delay_update_instances()

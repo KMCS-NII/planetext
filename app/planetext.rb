@@ -48,6 +48,8 @@ module PlaneText
       }
     end
 
+    # TODO upload
+
     delete '/dataset/:dataset' do |dataset|
       ensure_sandboxed(dataset, Config.datadir)
       FileUtils.rm_rf(dataset)
@@ -70,78 +72,24 @@ module PlaneText
       File.join(session_dir, dataset)
     end
 
-    def insert_standoff_data(unknowns, standoff, attr_name)
-      attr = unknowns[standoff.name][attr_name] ||= [
-        {}, # words
-        [], # instances
-        {} # distinct combos TODO
-      ]
-      instance_data = [
-        standoff.start_offset, # start
-        standoff.end_offset, # end
-        standoff.file_name, # file name
-        standoff.attributes[attr_name] # value
-      ]
-      index = attr[1].size
-      attr[1] << instance_data
-      [attr, index]
-    end
-
-    def unknown_tree(unknown_standoffs)
-      {}.tap { |unknowns|
-        unknown_standoffs.each do |standoff|
-          unknowns[standoff.name] ||= {}
-          if standoff.attributes.empty?
-            attr, index = *insert_standoff_data(unknowns, standoff, '')
-          else
-            standoff.attributes.each do |name, values|
-              attr, index = *insert_standoff_data(unknowns, standoff, name)
-              words = values.split(/\s+/)
-              if words.empty?
-                (attr[0][''] ||= []) << index
-              else
-                words.each do |word|
-                  (attr[0][word] ||= []) << index
-                end
-              end
-            end
-          end
-        end
-      }
-    end
-
     get '/dataset/:dataset' do |dataset|
       dataset_dir = get_dataset_dir(dataset)
       progress_file = get_progress_file(dataset, session[:session_id])
       doc_limit = session[:doc_limit] || 5
 
-      selectors, unknown_standoffs, processed_files, all_files =
-        *find_unknowns(dataset_dir, progress_file, doc_limit)
+      unknown = UnknownSearcher.new(dataset_dir, progress_file, doc_limit)
 
-      if processed_files == all_files
-        slim :done, {
-          locals: {
-            selectors: selectors
-          }
+      autosubmit = session[:autosubmit]
+      autosubmit = true if autosubmit.nil?
+      slim :step, {
+        locals: {
+          dataset_url: url("/dataset/#{dataset}"),
+          app_url: url("/"),
+          autosubmit: autosubmit,
+          doc_limit: doc_limit,
+          unknown: unknown
         }
-      else
-        autosubmit = session[:autosubmit]
-        autosubmit = true if autosubmit.nil?
-        slim :step, {
-          locals: {
-            unknowns: unknown_tree(unknown_standoffs),
-            selectors: selectors,
-            dataset_url: url("/dataset/#{dataset}"),
-            app_url: url("/"),
-            autosubmit: autosubmit,
-            doc_limit: doc_limit,
-            progress: {
-              done: processed_files,
-              total: all_files
-            }
-          }
-        }
-      end
+      }
     end
 
     CONTENT_TYPES = {
@@ -170,7 +118,6 @@ module PlaneText
             as_html: as_html
           }
           doc = extract(content, opts)
-          puts doc.enriched_xml.class
           content_type CONTENT_TYPES[extension]
           doc.enriched_xml
         else
