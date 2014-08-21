@@ -1,5 +1,7 @@
 require 'yaml'
 require 'settingslogic'
+require 'archive/tar/minitar'
+require 'zlib'
 require_relative 'extract'
 
 module HashRefinement
@@ -191,4 +193,42 @@ module PlaneText
     end
   end
 
+  class TarGzipPacker
+    def initialize
+      @stringio = StringIO.new
+      gz = Zlib::GzipWriter.new(@stringio)
+      @out = Archive::Tar::Minitar::Output.new(gz)
+      yield self and close if block_given?
+    end
+
+    def add_entry(name, string)
+      # Minitar doesn't handle UTF-8 well
+      bytes = string.dup
+      bytes.force_encoding('ASCII')
+
+      stats = {
+        mode: 0o644,
+        mtime: Time.new,
+        size: bytes.size,
+        gid: nil,
+        uid: nil
+      }
+      @out.tar.add_file_simple(name.to_s, stats) do |os|
+        os.write(bytes)
+      end
+      self
+    end
+
+    def close
+      return unless @out
+      @out.close
+      @out = nil
+      self
+    end
+
+    def to_s
+      close
+      @stringio.string
+    end
+  end
 end

@@ -45,6 +45,7 @@ GEM
     lumberjack (1.0.9)
     method_source (0.8.2)
     mini_portile (0.6.0)
+    minitar (0.5.4)
     nokogiri (1.6.3.1)
       mini_portile (= 0.6.0)
     nokogiri (1.6.3.1-java)
@@ -93,6 +94,7 @@ DEPENDENCIES
   guard-coffeescript
   guard-compass
   guard-rack
+  minitar
   nokogiri
   rack
   rb-fchange

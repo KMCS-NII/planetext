@@ -8,6 +8,7 @@ gem "coffee-script"
 gem "nokogiri"
 gem "sinatra-flash"
 gem "settingslogic"
+gem "minitar"
 
 group :development do
   gem "guard-rack"

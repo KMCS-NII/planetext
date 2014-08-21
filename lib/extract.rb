@@ -87,6 +87,7 @@ module PaperVu
           else
             displacement_text
           end
+        @brat_ann = @brat_ann.join("\n")
       end
 
       def select_elements(selectors)

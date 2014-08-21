@@ -10,8 +10,6 @@ require 'set'
 
 module PlaneText
 
-
-
   class App < Sinatra::Application
     include PlaneText::Common
 
@@ -126,6 +124,26 @@ module PlaneText
       rescue Errno::ENOENT
         halt 404, 'Not found'
       end
+    end
+
+    get '/dataset/:dataset/output' do |dataset|
+      dataset_dir = get_dataset_dir(dataset)
+      progress_file = get_progress_file(dataset, session[:session_id])
+      content_type 'application/x-gzip'
+      attachment dataset + ".tgz"
+      dataset_path = Pathname.new(dataset_dir)
+      the_tgz = TarGzipPacker.new do |tgz|
+        searcher = UnknownSearcher.new(dataset_dir, progress_file, nil)
+        searcher.per_doc do |xml_file, doc|
+          out = Pathname.new(xml_file).relative_path_from(dataset_path)
+          tgz.add_entry out, doc.enriched_xml
+          tgz.add_entry out.sub_ext('.txt'), doc.text
+          tgz.add_entry out.sub_ext('.ann'), doc.brat_ann
+        end
+        searcher.run
+      end
+      puts the_tgz.to_s.length
+      the_tgz.to_s
     end
 
     get '/dataset/:dataset/progress' do |dataset|

@@ -76,13 +76,14 @@ module PlaneText
   tags = progress_data[:tags]
   changes.each do |column, selectors|
     selectors.each do |selector|
+      # test shortcut (LINE:TAG.CLASS.CLASS...)
       md = /^(?:(\d+):)?([^\.\s]+)(\.\S*)/.match(selector)
-
       if md
         _, line, tag, classes = *md
         attr = 'class'
         values = classes.split('.')[1..-1]
       else
+        # test full (LINE:TAG[ATTR: WORD WORD...])
         md = /^(?:(\d+):)?([^\]\[]+)(?:\[([^:]*)(?::\s*([^\]]*))?\])?/.match(selector)
         STDERR.puts "Error: bad selector #{selector}" and next unless md
         _, line, tag, attr, values = *md
@@ -152,11 +153,3 @@ module PlaneText
 
   puts "", "Processed files: #{searcher.done}/#{searcher.total}" if verbose
 end
-
-
-
-# TODO
-# planetext config.yaml directory
-# planetext config.yaml directory -d "xmlns[class: main]" -l 5
-# planetext config.yaml directory -O outputdirectory
-
