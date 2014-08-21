@@ -125,7 +125,11 @@ module PaperVu
 
           # remove newlines from inside the string
           if replace_newlines = @opts[:replace_newlines]
-            text.gsub!(/(?<=\S)\u00ad?\n(?=\S)/, replace_newlines)
+            if @opts[:replace_all_newlines]
+              text.gsub!(/\u00ad?\n/, replace_newlines)
+            else
+              text.gsub!(/(?<=\S)\u00ad?\n(?=\S)/, replace_newlines)
+            end
           end
 
           # trim the element is at the start/end of a tag
@@ -218,8 +222,8 @@ module PaperVu
         @displacements.map do |displacement_name, displaced_data|
           displaced_node, displaced_offset = *displaced_data
           displaced_text = displaced_node.text
-          displacement_mod_name = @opts[:mark_displacement] ? displacement_name.sub('IND', 'IND_TEXT')[1..-2] : ''
-          displaced_header = "\n\n\n#{displacement_mod_name}: "
+          displacement_mod_name = @opts[:mark_displacement] ? displacement_name.sub('IND', 'IND_TEXT')[1..-2] + ":\n" : ''
+          displaced_header = "\n\n\n#{displacement_mod_name}"
           displaced_text_all = displaced_header + displaced_text
           displaced_data[2] = @offset + displaced_header.length - displaced_offset
           displaced_node["#{PREFIX}d"] = "#{@offset + displaced_header.length},#{@offset + displaced_text_all.length}"

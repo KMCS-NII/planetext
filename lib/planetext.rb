@@ -24,8 +24,9 @@ module PlaneText
 
     def extract(doc, conf={})
       conf = {
-        remove_whitespace: false,
+        remove_whitespace: true,
         replace_newlines: ' ',
+        replace_all_newlines: true,
         use_xpath: true,
         opaque_unknowns: true,
         newline: [],
@@ -90,6 +91,7 @@ module PlaneText
     def initialize(dataset_dir, progress_file, limit=1)
       @dataset_dir = dataset_dir
       @progress_file = progress_file
+      @all = limit == :all
       @limit = (Integer === limit && limit > 0) ? limit : nil
     end
 
@@ -104,8 +106,9 @@ module PlaneText
       all_files = Dir.chdir(@dataset_dir) { |dir|
         Dir['**/*.{xml,xhtml,html}']
       }
-      processed_files = progress_data[:processed_files] || all_files
+      processed_files = @all && [] || progress_data[:processed_files] || all_files
       unprocessed_files = all_files - processed_files
+
       @selectors = {
         displaced: to_xpath(progress_data[:tags][:independent]),
         ignored: to_xpath(progress_data[:tags][:decoration]),
@@ -138,7 +141,7 @@ module PlaneText
       else
         progress_data[:processed_files] = processed_files
       end
-      save_progress_file(@progress_file, progress_data)
+      save_progress_file(@progress_file, progress_data) unless @all
 
       @selectors = progress_data[:tags].hmap { |type, selector_list|
         selector_texts = selector_list.map { |selector_array|

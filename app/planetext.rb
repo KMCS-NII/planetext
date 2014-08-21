@@ -132,8 +132,8 @@ module PlaneText
       content_type 'application/x-gzip'
       attachment dataset + ".tgz"
       dataset_path = Pathname.new(dataset_dir)
-      the_tgz = TarGzipPacker.new do |tgz|
-        searcher = UnknownSearcher.new(dataset_dir, progress_file, nil)
+      TarGzipPacker.new do |tgz|
+        searcher = UnknownSearcher.new(dataset_dir, progress_file, :all)
         searcher.per_doc do |xml_file, doc|
           out = Pathname.new(xml_file).relative_path_from(dataset_path)
           tgz.add_entry out, doc.enriched_xml
@@ -141,9 +141,7 @@ module PlaneText
           tgz.add_entry out.sub_ext('.ann'), doc.brat_ann
         end
         searcher.run
-      end
-      puts the_tgz.to_s.length
-      the_tgz.to_s
+      end.to_s
     end
 
     get '/dataset/:dataset/progress' do |dataset|
