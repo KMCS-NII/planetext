@@ -86,10 +86,20 @@ module PlaneText
 
     attr_reader :selectors, :unknown_standoffs, :done, :total
     def initialize(dataset_dir, progress_file, limit=1)
-      progress_data = get_progress_data(progress_file)
+      @dataset_dir = dataset_dir
+      @progress_file = progress_file
+      @limit = (Integer === limit && limit > 0) ? limit : nil
+    end
+
+    def per_doc(&block)
+      @per_doc = block
+    end
+
+    def run
+      progress_data = get_progress_data(@progress_file)
 
       @unknown_standoffs = []
-      all_files = Dir.chdir(dataset_dir) { |dir|
+      all_files = Dir.chdir(@dataset_dir) { |dir|
         Dir['**/*.{xml,xhtml,html}']
       }
       processed_files = progress_data[:processed_files] || all_files
@@ -102,20 +112,23 @@ module PlaneText
       }
       dirty_files = 0
       unprocessed_files.each do |xml_file_name|
-        xml_file = File.absolute_path(xml_file_name, dataset_dir)
+        xml_file = File.absolute_path(xml_file_name, @dataset_dir)
         xml = File.read(xml_file)
         as_html = xml_file_name[-5..-1] == '.html'
         opts = {
           file_name: xml_file_name,
           as_html: as_html
         }.merge(@selectors)
+
         doc = extract(xml, opts)
+        @per_doc[xml_file, doc] if @per_doc
+
         @unknown_standoffs += doc.unknown_standoffs
         if doc.unknown_standoffs.empty?
           processed_files << xml_file_name
         else
           dirty_files += 1
-          break if dirty_files >= limit
+          break if @limit && dirty_files >= @limit
         end
       end
       if processed_files.length == all_files.length
@@ -123,7 +136,7 @@ module PlaneText
       else
         progress_data[:processed_files] = processed_files
       end
-      save_progress_file(progress_file, progress_data)
+      save_progress_file(@progress_file, progress_data)
 
       @selectors = progress_data[:tags].hmap { |type, selector_list|
         selector_texts = selector_list.map { |selector_array|
@@ -134,6 +147,7 @@ module PlaneText
 
       @done = processed_files.length
       @total = all_files.length
+      self
     end
 
     def insert_standoff_data(unknowns, standoff, attr_name)

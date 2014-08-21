@@ -77,7 +77,7 @@ module PlaneText
       progress_file = get_progress_file(dataset, session[:session_id])
       doc_limit = session[:doc_limit] || 5
 
-      unknown = UnknownSearcher.new(dataset_dir, progress_file, doc_limit)
+      unknown = UnknownSearcher.new(dataset_dir, progress_file, doc_limit).run
 
       autosubmit = session[:autosubmit]
       autosubmit = true if autosubmit.nil?
