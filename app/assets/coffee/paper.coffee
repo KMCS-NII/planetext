@@ -25,17 +25,27 @@ define ['jquery','annotation_inserter'], ($, AnnotationInserter) ->
         error: =>
           console.warn "Error loading #{@dir}/types.json"
 
-    load: (@filename, @data, callback) -> # instead of data, can give "ann"/"json"
-      # TODO don't need docext
-      [_, @basename, @dir, @docext] = @filename.match(/^((?:(.*)\/)?[^\/]*)\.([^.]+)$/)
+    clear: ->
+      @viewer.$iframe_doc.find("[kmcs-a]").each ->
+        $(this.childNodes[0]).unwrap()
+
+    load: (filename, @data, callback) -> # instead of data, can give "ann"/"json"
+      if filename
+        @filename = filename
+        # TODO don't need docext
+        [_, @basename, @dir, @docext] = filename.match(/^((?:(.*)\/)?[^\/]*)\.([^.]+)$/)
+        @types = null
       if typeof(@data) == "string"
         @ext = @data
         @data = null
       else if !@data
         @ext = "ann"
-      @types = null
 
-      actions = [@load_document()]
+      actions = []
+      if filename
+        actions.push(@load_document())
+      else
+        @clear()
       unless @data
         actions.push(@load_data())
       if @ext == "ann"

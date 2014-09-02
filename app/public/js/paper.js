@@ -58,19 +58,32 @@
         });
       };
 
+      Paper.prototype.clear = function() {
+        return this.viewer.$iframe_doc.find("[kmcs-a]").each(function() {
+          return $(this.childNodes[0]).unwrap();
+        });
+      };
+
       Paper.prototype.load = function(filename, data, callback) {
         var actions, _, _ref;
-        this.filename = filename;
         this.data = data;
-        _ref = this.filename.match(/^((?:(.*)\/)?[^\/]*)\.([^.]+)$/), _ = _ref[0], this.basename = _ref[1], this.dir = _ref[2], this.docext = _ref[3];
+        if (filename) {
+          this.filename = filename;
+          _ref = filename.match(/^((?:(.*)\/)?[^\/]*)\.([^.]+)$/), _ = _ref[0], this.basename = _ref[1], this.dir = _ref[2], this.docext = _ref[3];
+          this.types = null;
+        }
         if (typeof this.data === "string") {
           this.ext = this.data;
           this.data = null;
         } else if (!this.data) {
           this.ext = "ann";
         }
-        this.types = null;
-        actions = [this.load_document()];
+        actions = [];
+        if (filename) {
+          actions.push(this.load_document());
+        } else {
+          this.clear();
+        }
         if (!this.data) {
           actions.push(this.load_data());
         }

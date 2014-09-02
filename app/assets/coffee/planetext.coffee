@@ -164,14 +164,22 @@ define [
       pos = $el.offset().top - $el.scrollTop()
       $iframe[0].contentWindow.scrollTo(0, Math.max(0, pos - third_of_height))
 
+    last_file = null
+    paper = null
     $instance.on 'update', ->
       selected_instance = $instance.find('li.selected').text()
       selected_instance = $instance.find('li').first().text() unless selected_instance
       if selected_instance
         match = /^(.*) \((\d+)-(\d+)\)$/.exec(selected_instance)
         [_, file, from, to] = match
-        paper = new Paper(viewer)
-        paper.load(dataset_url + '/file/' + file, {
+        url =
+          if file == last_file
+            null
+          else
+            paper = new Paper(viewer)
+            last_file = file
+            dataset_url + '/file/' + file
+        paper.load(url, {
           types:
             Instance: '#ff9999ff'
           standoffs:

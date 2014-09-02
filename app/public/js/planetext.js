@@ -4,7 +4,7 @@
   define(['jquery', 'viewer', 'paper'], function($, Viewer, Paper) {
     var init_step;
     init_step = function() {
-      var $attr, $dragged, $iframe, $inserted_row, $instance, $selects, $tag, $value, $word, COLUMN_KEYCODES, SELECTS, autosubmit, changes, delay_update_instances, delay_update_timer, delete_inserted_row, drag_mode, dragged_element_original_text, dragged_selector, drop_ok, fill_instances_by_word, get_selector, insert_row_timer, is_ctrl_down, is_mac, move_selector, move_vertically, num_selects, original_column, scroll_into_ul_view, scroll_into_view, submit_changes, viewer;
+      var $attr, $dragged, $iframe, $inserted_row, $instance, $selects, $tag, $value, $word, COLUMN_KEYCODES, SELECTS, autosubmit, changes, delay_update_instances, delay_update_timer, delete_inserted_row, drag_mode, dragged_element_original_text, dragged_selector, drop_ok, fill_instances_by_word, get_selector, insert_row_timer, is_ctrl_down, is_mac, last_file, move_selector, move_vertically, num_selects, original_column, paper, scroll_into_ul_view, scroll_into_view, submit_changes, viewer;
       is_mac = window.navigator.platform === 'MacIntel';
       is_ctrl_down = function(evt) {
         if (is_mac) {
@@ -240,8 +240,10 @@
         pos = $el.offset().top - $el.scrollTop();
         return $iframe[0].contentWindow.scrollTo(0, Math.max(0, pos - third_of_height));
       };
+      last_file = null;
+      paper = null;
       $instance.on('update', function() {
-        var file, from, match, paper, selected_instance, to, _;
+        var file, from, match, selected_instance, to, url, _;
         selected_instance = $instance.find('li.selected').text();
         if (!selected_instance) {
           selected_instance = $instance.find('li').first().text();
@@ -249,8 +251,8 @@
         if (selected_instance) {
           match = /^(.*) \((\d+)-(\d+)\)$/.exec(selected_instance);
           _ = match[0], file = match[1], from = match[2], to = match[3];
-          paper = new Paper(viewer);
-          return paper.load(dataset_url + '/file/' + file, {
+          url = file === last_file ? null : (paper = new Paper(viewer), last_file = file, dataset_url + '/file/' + file);
+          return paper.load(url, {
             types: {
               Instance: '#ff9999ff'
             },
