@@ -6,7 +6,31 @@
   };
 
   define(['jquery', 'constants'], function($, Constants) {
-    var AnnotationInserter;
+    var AnnotationInserter, high_unicode_re, true_length;
+    high_unicode_re = /[\ud800-\udbff]/g;
+    true_length = function(str) {
+      var len;
+      len = str.length;
+      while (high_unicode_re.exec(str)) {
+        len--;
+      }
+      return len;
+    };
+    window.true_substring = function(str, from, to) {
+      high_unicode_re.lastIndex = null;
+      while (high_unicode_re.exec(str) && high_unicode_re.lastIndex <= from) {
+        from++;
+      }
+      if (to !== void 0 && high_unicode_re.lastIndex) {
+        if (high_unicode_re.lastIndex <= to) {
+          to++;
+        }
+        while (high_unicode_re.exec(str) && high_unicode_re.lastIndex <= to) {
+          to++;
+        }
+      }
+      return str.substring(from, to);
+    };
     return AnnotationInserter = (function() {
       function AnnotationInserter(data, $iframe_doc) {
         var standoff, _i, _len, _ref;
@@ -54,7 +78,7 @@
           b: this.offset
         };
         if (node.nodeType === node.TEXT_NODE) {
-          this.offset += node.textContent.length;
+          this.offset += true_length(node.textContent);
         } else if (node.getAttribute && (replacement = node.getAttribute(Constants.REPLACEMENT_ATTRIBUTE)) !== null) {
           if (node.getAttribute(Constants.DISPLACEMENT_ATTRIBUTE) !== null) {
             offset_memo = this.offset;
@@ -63,9 +87,9 @@
               child = _ref[_i];
               this.mark_node_positions(child);
             }
-            this.offset = offset_memo + replacement.length;
+            this.offset = offset_memo + true_length(replacement);
           } else {
-            this.offset += replacement.length;
+            this.offset += true_length(replacement);
           }
         } else {
           _ref1 = node.childNodes;
@@ -138,7 +162,7 @@
             e: side === 0 ? pos.e : extent[1]
           };
           if (ann.b !== pos.b) {
-            text = node.textContent.substring(0, ann.b - pos.b);
+            text = true_substring(node.textContent, ann.b - pos.b);
             child_node = document.createTextNode(text);
             child_node[Constants.PROPERTY] = {
               b: pos.b,
@@ -151,7 +175,7 @@
           node[Constants.PROPERTY] = ann;
           node.parentNode.insertBefore(wrap_node, node);
           if (ann.e !== pos.e) {
-            text = node.textContent.substring(ann.e - pos.b);
+            text = true_substring(node.textContent, ann.e - pos.b);
             child_node = document.createTextNode(text);
             child_node[Constants.PROPERTY] = {
               b: ann.e,
@@ -159,7 +183,7 @@
             };
             node.parentNode.insertBefore(child_node, node);
           }
-          node.textContent = node.textContent.substring(ann.b - pos.b, ann.e - pos.b);
+          node.textContent = true_substring(node.textContent, ann.b - pos.b, ann.e - pos.b);
           node.parentNode.removeChild(node);
           wrap_node.appendChild(node);
           return null;
