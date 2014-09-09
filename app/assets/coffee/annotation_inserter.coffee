@@ -2,18 +2,20 @@ window.x = (xpath) -> # DEBUG
   document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue
 
 define ['jquery', 'constants'], ($, Constants) ->
-  high_unicode_re = /[\ud800-\udbff]/g
-  true_length = (str) ->
+  high_unicode_re = /[\ud800-\udbff](?=[\udc00-\udfff])/g
+  unicode_length = (str) ->
+    high_unicode_re.lastIndex = 0
     len = str.length
     len-- while high_unicode_re.exec(str)
     len
-  window.true_substring = (str, from, to) ->
-    high_unicode_re.lastIndex = null
-    from++ while high_unicode_re.exec(str) && high_unicode_re.lastIndex <= from
-    if to != undefined && high_unicode_re.lastIndex
-      to++ if high_unicode_re.lastIndex <= to
-      to++ while high_unicode_re.exec(str) && high_unicode_re.lastIndex <= to
+  unicode_substring = (str, from, to) ->
+    high_unicode_re.lastIndex = 0
+    limit = to || from
+    while (m = high_unicode_re.exec(str)) && high_unicode_re.lastIndex <= limit
+      from++ if high_unicode_re.lastIndex <= from
+      to++ if to
     str.substring(from, to)
+
   class AnnotationInserter
     constructor: (data, @$iframe_doc) ->
       @start_node = @$iframe_doc[0].documentElement
@@ -48,15 +50,15 @@ define ['jquery', 'constants'], ($, Constants) ->
         b: @offset
 
       if node.nodeType == node.TEXT_NODE
-        @offset += true_length(node.textContent)
+        @offset += unicode_length(node.textContent)
       else if node.getAttribute and
           (replacement = node.getAttribute(Constants.REPLACEMENT_ATTRIBUTE)) != null
         if node.getAttribute(Constants.DISPLACEMENT_ATTRIBUTE) != null
           offset_memo = @offset
           @mark_node_positions(child) for child in node.childNodes
-          @offset = offset_memo + true_length(replacement)
+          @offset = offset_memo + unicode_length(replacement)
         else
-          @offset += true_length(replacement)
+          @offset += unicode_length(replacement)
       else
         @mark_node_positions(child) for child in node.childNodes
 
@@ -111,7 +113,7 @@ define ['jquery', 'constants'], ($, Constants) ->
           e: if side == 0 then pos.e else extent[1]
 
         unless ann.b == pos.b
-          text = true_substring(node.textContent, ann.b - pos.b)
+          text = unicode_substring(node.textContent, ann.b - pos.b)
           child_node = document.createTextNode(text)
           child_node[Constants.PROPERTY] =
             b: pos.b
@@ -124,14 +126,14 @@ define ['jquery', 'constants'], ($, Constants) ->
         node.parentNode.insertBefore(wrap_node, node)
 
         unless ann.e == pos.e
-          text = true_substring(node.textContent, ann.e - pos.b)
+          text = unicode_substring(node.textContent, ann.e - pos.b)
           child_node = document.createTextNode(text)
           child_node[Constants.PROPERTY] =
             b: ann.e
             e: pos.e
           node.parentNode.insertBefore(child_node, node)
 
-        node.textContent = true_substring(node.textContent, ann.b - pos.b, ann.e - pos.b)
+        node.textContent = unicode_substring(node.textContent, ann.b - pos.b, ann.e - pos.b)
         node.parentNode.removeChild(node)
         wrap_node.appendChild(node)
         return null

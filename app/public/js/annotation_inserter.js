@@ -6,26 +6,26 @@
   };
 
   define(['jquery', 'constants'], function($, Constants) {
-    var AnnotationInserter, high_unicode_re, true_length;
-    high_unicode_re = /[\ud800-\udbff]/g;
-    true_length = function(str) {
+    var AnnotationInserter, high_unicode_re, unicode_length, unicode_substring;
+    high_unicode_re = /[\ud800-\udbff](?=[\udc00-\udfff])/g;
+    unicode_length = function(str) {
       var len;
+      high_unicode_re.lastIndex = 0;
       len = str.length;
       while (high_unicode_re.exec(str)) {
         len--;
       }
       return len;
     };
-    window.true_substring = function(str, from, to) {
-      high_unicode_re.lastIndex = null;
-      while (high_unicode_re.exec(str) && high_unicode_re.lastIndex <= from) {
-        from++;
-      }
-      if (to !== void 0 && high_unicode_re.lastIndex) {
-        if (high_unicode_re.lastIndex <= to) {
-          to++;
+    unicode_substring = function(str, from, to) {
+      var limit, m;
+      high_unicode_re.lastIndex = 0;
+      limit = to || from;
+      while ((m = high_unicode_re.exec(str)) && high_unicode_re.lastIndex <= limit) {
+        if (high_unicode_re.lastIndex <= from) {
+          from++;
         }
-        while (high_unicode_re.exec(str) && high_unicode_re.lastIndex <= to) {
+        if (to) {
           to++;
         }
       }
@@ -78,7 +78,7 @@
           b: this.offset
         };
         if (node.nodeType === node.TEXT_NODE) {
-          this.offset += true_length(node.textContent);
+          this.offset += unicode_length(node.textContent);
         } else if (node.getAttribute && (replacement = node.getAttribute(Constants.REPLACEMENT_ATTRIBUTE)) !== null) {
           if (node.getAttribute(Constants.DISPLACEMENT_ATTRIBUTE) !== null) {
             offset_memo = this.offset;
@@ -87,9 +87,9 @@
               child = _ref[_i];
               this.mark_node_positions(child);
             }
-            this.offset = offset_memo + true_length(replacement);
+            this.offset = offset_memo + unicode_length(replacement);
           } else {
-            this.offset += true_length(replacement);
+            this.offset += unicode_length(replacement);
           }
         } else {
           _ref1 = node.childNodes;
@@ -162,7 +162,7 @@
             e: side === 0 ? pos.e : extent[1]
           };
           if (ann.b !== pos.b) {
-            text = true_substring(node.textContent, ann.b - pos.b);
+            text = unicode_substring(node.textContent, ann.b - pos.b);
             child_node = document.createTextNode(text);
             child_node[Constants.PROPERTY] = {
               b: pos.b,
@@ -175,7 +175,7 @@
           node[Constants.PROPERTY] = ann;
           node.parentNode.insertBefore(wrap_node, node);
           if (ann.e !== pos.e) {
-            text = true_substring(node.textContent, ann.e - pos.b);
+            text = unicode_substring(node.textContent, ann.e - pos.b);
             child_node = document.createTextNode(text);
             child_node[Constants.PROPERTY] = {
               b: ann.e,
@@ -183,7 +183,7 @@
             };
             node.parentNode.insertBefore(child_node, node);
           }
-          node.textContent = true_substring(node.textContent, ann.b - pos.b, ann.e - pos.b);
+          node.textContent = unicode_substring(node.textContent, ann.b - pos.b, ann.e - pos.b);
           node.parentNode.removeChild(node);
           wrap_node.appendChild(node);
           return null;
