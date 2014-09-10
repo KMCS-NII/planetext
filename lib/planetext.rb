@@ -4,21 +4,22 @@ require 'archive/tar/minitar'
 require 'zlib'
 require_relative 'extract'
 
-module HashRefinement
-  refine Hash do
-    def hmap
-      Hash[self.map {|k, v| yield k, v }]
+module PlaneText
+
+  module HashRefinement
+    refine Hash do
+      def hmap
+        Hash[self.map {|k, v| yield k, v }]
+      end
     end
   end
-end
-
-module PlaneText
 
   class Config < Settingslogic
     source "config.yaml"
     suppress_errors true
     load!
   end
+
 
   module Common
 
@@ -119,10 +120,12 @@ module PlaneText
       unprocessed_files.each do |xml_file_name|
         xml_file = File.absolute_path(xml_file_name, @dataset_dir)
         xml = File.read(xml_file)
-        as_html = xml_file_name[-5..-1] == '.html'
+        read_as_html = xml_file_name[-5..-1] == '.html'
+        write_as_xhtml = xml_file_name[-5..-1] != '.xml'
         opts = {
           file_name: xml_file_name,
-          as_html: as_html
+          read_as_html: read_as_html,
+          write_as_xhtml: write_as_xhtml
         }.merge(@selectors)
 
         doc = extract(xml, opts)

@@ -55,7 +55,7 @@ module PaperVu
         str = HTMLEntityMap.replace(str)
         @opts = opts
         @document =
-          if @opts[:as_html]
+          if @opts[:read_as_html]
             Nokogiri::HTML(str, nil, 'UTF-8')
           else
             Nokogiri::XML(str, nil, 'UTF-8')
@@ -77,7 +77,10 @@ module PaperVu
         remove_whitespace!(@document.root) if @opts[:remove_whitespace]
         note_replacements!(@document.root)
         displacement_text = note_displacements!
-        @enriched_xml = @document.root.to_xml(:save_with => Nokogiri::XML::Node::SaveOptions::AS_XML | Nokogiri::XML::Node::SaveOptions::NO_DECLARATION).
+        save_format_option = @opts[:write_as_xhtml] ?
+          Nokogiri::XML::Node::SaveOptions::AS_XHTML :
+          Nokogiri::XML::Node::SaveOptions::AS_XML
+        @enriched_xml = @document.root.to_xml(:save_with => save_format_option | Nokogiri::XML::Node::SaveOptions::NO_DECLARATION).
           # Apparently a bug in Nokogiri makes this necessary:
           gsub(%r{(xmlns="http://www\.w3\.org/1999/xhtml") \1}, "\\1")
         replace!
@@ -148,6 +151,8 @@ module PaperVu
       end
 
       def note_replacements!(node=@document, displacement_name=nil)
+        return if node.comment?
+
         if node.text?
           @offset += node.text.length
         else

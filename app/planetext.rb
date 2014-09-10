@@ -106,14 +106,16 @@ module PlaneText
           extension = $1
           progress_file = get_progress_file(dataset, session[:session_id])
           progress_data = get_progress_data(progress_file)
-          as_html = extension == 'html'
+          read_as_html = extension == 'html'
+          write_as_xhtml = extension == 'html' || extension == 'xhtml'
           opts = {
             displaced: to_xpath(progress_data[:tags][:independent]),
             ignored: to_xpath(progress_data[:tags][:decoration]),
             replaced: to_xpath(progress_data[:tags][:object]),
             removed: to_xpath(progress_data[:tags][:metainfo]),
             file_name: filename,
-            as_html: as_html
+            read_as_html: read_as_html,
+            write_as_xhtml: write_as_xhtml
           }
           doc = extract(content, opts)
           content_type CONTENT_TYPES[extension]
