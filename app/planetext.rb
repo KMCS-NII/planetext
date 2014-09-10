@@ -96,13 +96,13 @@ module PlaneText
       'xml' => 'text/xml'
     }
 
-    get '/dataset/:dataset/file/:file' do |dataset, filename|
+    get '/dataset/:dataset/file/*' do |dataset, filename|
       dataset_dir = get_dataset_dir(dataset)
-      file = File.join(dataset_dir, filename)
+      file = File.join(dataset_dir, params[:splat].first)
       ensure_sandboxed(file, dataset_dir)
       begin
-        content = File.read(file)
         if file =~ /\.(xml|x?html)/
+          content = File.read(file)
           extension = $1
           progress_file = get_progress_file(dataset, session[:session_id])
           progress_data = get_progress_data(progress_file)
@@ -119,7 +119,7 @@ module PlaneText
           content_type CONTENT_TYPES[extension]
           doc.enriched_xml
         else
-          content
+          send_file file
         end
       rescue Errno::ENOENT
         halt 404, 'Not found'
