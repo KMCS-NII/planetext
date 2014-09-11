@@ -116,6 +116,7 @@ module PlaneText
     end
   end
 
+  limit = :all if output_dir
   searcher = UnknownSearcher.new(input_dir, progress_file, limit)
   if output_dir
     unless File.exist?(output_dir)
