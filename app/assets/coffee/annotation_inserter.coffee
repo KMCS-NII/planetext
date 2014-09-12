@@ -32,6 +32,7 @@ define ['jquery', 'constants'], ($, Constants) ->
 
     generate_stylesheet: (types) ->
       css = []
+      @$iframe_doc.find("style[#{Constants.REPLACEMENT_ATTRIBUTE}]").remove()
       for own type, colour of types
         if match = colour.match(/([0-9A-F]{2})([0-9A-F]{2})([0-9A-F]{2})([0-9A-F]{2})?/i)
           r = parseInt(match[1], 16)

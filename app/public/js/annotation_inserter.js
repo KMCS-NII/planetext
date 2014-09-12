@@ -54,6 +54,7 @@
       AnnotationInserter.prototype.generate_stylesheet = function(types) {
         var $head, a, b, colour, css, g, match, r, style_tag, style_text, type;
         css = [];
+        this.$iframe_doc.find("style[" + Constants.REPLACEMENT_ATTRIBUTE + "]").remove();
         for (type in types) {
           if (!__hasProp.call(types, type)) continue;
           colour = types[type];
