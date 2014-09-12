@@ -115,6 +115,7 @@ module PlaneText
             removed: to_xpath(progress_data[:tags][:metainfo]),
             file_name: filename,
             read_as_html: read_as_html,
+            deactivate_scripts: write_as_xhtml,
             write_as_xhtml: write_as_xhtml
           }
           doc = extract(content, opts)

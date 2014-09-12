@@ -80,7 +80,29 @@ module PaperVu
         save_format_option = @opts[:write_as_xhtml] ?
           Nokogiri::XML::Node::SaveOptions::AS_XHTML :
           Nokogiri::XML::Node::SaveOptions::AS_XML
-        @enriched_xml = @document.root.to_xml(:save_with => save_format_option | Nokogiri::XML::Node::SaveOptions::NO_DECLARATION).
+        if @opts[:deactivate_scripts]
+          enriched_doc = @document.clone
+          enriched_doc.css('script').each do |node|
+            type = node['type']
+            if !type
+              node['type'] = "application/#{PREFIX}DEFAULT"
+            elsif (match = %r{^(text|application)/(x-)?(javascript)$}i.match(type))
+              node['type'] = "#{match[1]}/#{match[2]}#{PREFIX}#{match[3]}"
+            end
+            language = node['language']
+            if language && 'javascript' == language.downcase
+              node['language'] = PREFIX + language
+            end
+          end
+          enriched_doc.css('noscript').each do |node|
+            content = node.to_xhtml
+            content.gsub!(/<!--(.*?)-->/, "<!-#{PREFIX}$1-#{PREFIX}>")
+            node.replace("<!--#{PREFIX}#{content}-->")
+          end
+        else
+          enriched_doc = @document
+        end
+        @enriched_xml = enriched_doc.root.to_xml(:save_with => save_format_option | Nokogiri::XML::Node::SaveOptions::NO_DECLARATION).
           # Apparently a bug in Nokogiri makes this necessary:
           gsub(%r{(xmlns="http://www\.w3\.org/1999/xhtml") \1}, "\\1")
         replace!
