@@ -113,6 +113,8 @@ define ['jquery', 'constants'], ($, Constants) ->
           b: if side == 1 then pos.b else extent[0]
           e: if side == 0 then pos.e else extent[1]
 
+        return if ann.b == ann.e
+
         unless ann.b == pos.b
           text = unicode_substring(node.textContent, ann.b - pos.b)
           child_node = document.createTextNode(text)

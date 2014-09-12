@@ -162,6 +162,9 @@
             b: side === 1 ? pos.b : extent[0],
             e: side === 0 ? pos.e : extent[1]
           };
+          if (ann.b === ann.e) {
+            return;
+          }
           if (ann.b !== pos.b) {
             text = unicode_substring(node.textContent, ann.b - pos.b);
             child_node = document.createTextNode(text);
