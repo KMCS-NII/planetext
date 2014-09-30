@@ -73,6 +73,7 @@ module PaperVu
         @brat_ann = []
         @ann_count = 0
         collect_notable_elements
+        replace_cdata!
 
         remove_whitespace!(@document.root) if @opts[:remove_whitespace]
         note_replacements!(@document.root)
@@ -131,6 +132,13 @@ module PaperVu
         @displaced = select_elements(@opts[:displaced])
         @ignored = select_elements(@opts[:ignored])
         @newline = select_elements(@opts[:newline])
+      end
+
+      def replace_cdata!
+        @document.search('//*/text()').select(&:cdata?).each do |cdata|
+          text = @document.create_text_node(cdata.text)
+          cdata.replace(text)
+        end
       end
 
       def remove_whitespace!(node=@document)
