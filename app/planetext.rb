@@ -3,8 +3,6 @@
 require 'bundler/setup'
 require_relative '../lib/planetext'
 require 'slim'
-require 'sass'
-require 'coffee-script'
 require 'fileutils'
 require 'set'
 
