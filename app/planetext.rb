@@ -3,15 +3,18 @@
 require 'bundler/setup'
 require_relative '../lib/planetext'
 require 'slim'
-require 'sass'
-require 'coffee-script'
 require 'fileutils'
 require 'set'
 
 module PlaneText
+
   class App < Sinatra::Application
+    include PlaneText::Common
+
     set :haml, format: :html5
     set :method_override, true
+    set :static, true
+    set :public_folder, File.join(settings.root, 'app/public')
     set :views, File.join(settings.root, 'app/views')
     enable :sessions
     set :session_secret, Config.webapp.session_secret
@@ -31,7 +34,7 @@ module PlaneText
 
     get '/' do
       # choose dataset -> dataset/:name
-      # import dataset -> AJAX PUT dataset/:name, client redirect
+      # import dataset -> AJAX PUT dataset/:name, client redirect TODO
       # delete dataset -> AJAX DELETE datasets/:name
       datasets = Dir[File.join(Config.datadir, '*')].
         map { |file| File.basename(file) }
@@ -39,6 +42,8 @@ module PlaneText
         datasets: datasets
       }
     end
+
+    # TODO upload
 
     delete '/dataset/:dataset' do |dataset|
       ensure_sandboxed(dataset, Config.datadir)
@@ -62,111 +67,132 @@ module PlaneText
       File.join(session_dir, dataset)
     end
 
-    def save_progress_file(progress_file, progress_data)
-      File.write(progress_file, YAML.dump(progress_data))
-    end
-
-    def get_progress_data(progress_file, dataset_dir)
-      # find the user data pertaining to current dataset
-      if File.exist?(progress_file)
-        YAML.load(File.read(progress_file))
-      else
-        {
-          processed_files: [],
-          tags: {
-            independent: [],
-            decoration: [],
-            object: [],
-            metainfo: []
-          }
-        }
-      end
-    end
-
-    class JSONableSortedSet < SortedSet
-      def to_json(*args)
-        to_a.to_json(*args)
-      end
-    end
-
-    def insert_standoff_data(unknowns, standoff, attr_name)
-      attr = unknowns[standoff.name][attr_name] ||= [
-        {}, # words
-        [], # instances
-        {} # distinct combos TODO
-      ]
-      instance_data = [
-        standoff.start_offset, # start
-        standoff.end_offset, # end
-        standoff.file_name, # file name
-        standoff.attributes[attr_name] # value
-      ]
-      index = attr[1].size
-      attr[1] << instance_data
-      [attr, index]
-    end
-
-    def unknown_tree(unknown_standoffs)
-      {}.tap { |unknowns|
-        unknown_standoffs.each do |standoff|
-          unknowns[standoff.name] ||= {}
-          if standoff.attributes.empty?
-            attr, index = *insert_standoff_data(unknowns, standoff, '-')
-          else
-            standoff.attributes.each do |name, values|
-              attr, index = *insert_standoff_data(unknowns, standoff, name)
-              words = values.split(/\s+/)
-              words.each do |word|
-                (attr[0][word] ||= []) << index
-              end
-            end
-          end
-        end
-      }
-    end
-
     get '/dataset/:dataset' do |dataset|
       dataset_dir = get_dataset_dir(dataset)
       progress_file = get_progress_file(dataset, session[:session_id])
-      progress_data = get_progress_data(progress_file, dataset_dir)
+      doc_limit = session[:doc_limit] || 5
 
-      processed_files = []
-      unknown_standoffs = []
-      processed_files = progress_data[:processed_files]
-      all_files = Dir.chdir(dataset_dir) { |dir|
-        Dir['**/*.{xml,xhtml}']
+      unknown = UnknownSearcher.new(dataset_dir, progress_file, doc_limit).run
+
+      autosubmit = session[:autosubmit]
+      autosubmit = true if autosubmit.nil?
+      slim :step, {
+        locals: {
+          dataset_url: url("/dataset/#{dataset}"),
+          app_url: url("/"),
+          autosubmit: autosubmit,
+          doc_limit: doc_limit,
+          unknown: unknown
+        }
       }
-      unprocessed_files = all_files - processed_files
-      limit = Config.webapp.files_at_once || 1
-      unprocessed_files = unprocessed_files.take(limit) if limit > 0
-      unprocessed_files.each do |xml_file_name|
-        xml_file = File.absolute_path(xml_file_name, dataset_dir)
-        xml = File.read(xml_file)
-        doc = Extractor.extract(xml, {
-          file_name: xml_file_name,
-          displaced: progress_data[:tags][:independent],
-          ignored: progress_data[:tags][:decoration],
-          replaced: progress_data[:tags][:object],
-          removed: progress_data[:tags][:metainfo]
-        })
-        unknown_standoffs += doc.unknown_standoffs
-        processed_files << xml_file_name if doc.unknown_standoffs.empty?
-      end
-      progress_data[:processed_files] = processed_files
-      save_progress_file(progress_file, progress_data)
+    end
 
-      if processed_files.length == unprocessed_files.length
-        slim :done, {
-          locals: {
+    CONTENT_TYPES = {
+      'html' => 'text/html',
+      'xhtml' => 'application/xhtml+xml',
+      'xml' => 'text/xml'
+    }
+
+    get '/dataset/:dataset/file/*' do |dataset, filename|
+      dataset_dir = get_dataset_dir(dataset)
+      file = File.join(dataset_dir, params[:splat].first)
+      ensure_sandboxed(file, dataset_dir)
+      begin
+        if file =~ /\.(xml|x?html)/
+          content = File.read(file)
+          extension = $1
+          progress_file = get_progress_file(dataset, session[:session_id])
+          progress_data = get_progress_data(progress_file)
+          read_as_html = extension == 'html'
+          write_as_xhtml = extension == 'html' || extension == 'xhtml'
+          opts = {
+            displaced: to_xpath(progress_data[:tags][:independent]),
+            ignored: to_xpath(progress_data[:tags][:decoration]),
+            replaced: to_xpath(progress_data[:tags][:object]),
+            removed: to_xpath(progress_data[:tags][:metainfo]),
+            file_name: filename,
+            read_as_html: read_as_html,
+            deactivate_scripts: write_as_xhtml,
+            write_as_xhtml: write_as_xhtml
           }
-        }
-      else
-        slim :step, {
-          locals: {
-            unknowns: unknown_tree(unknown_standoffs)
-          }
-        }
+          doc = extract(content, opts)
+          content_type CONTENT_TYPES[extension]
+          doc.enriched_xml
+        else
+          send_file file
+        end
+      rescue Errno::ENOENT
+        halt 404, 'Not found'
       end
+    end
+
+    get '/dataset/:dataset/output' do |dataset|
+      dataset_dir = get_dataset_dir(dataset)
+      progress_file = get_progress_file(dataset, session[:session_id])
+      content_type 'application/x-gzip'
+      attachment dataset + ".tgz"
+      dataset_path = Pathname.new(dataset_dir)
+      TarGzipPacker.new do |tgz|
+        searcher = UnknownSearcher.new(dataset_dir, progress_file, :all)
+        searcher.per_doc do |xml_file, doc|
+          out = Pathname.new(xml_file).relative_path_from(dataset_path)
+          tgz.add_entry out, doc.enriched_xml
+          tgz.add_entry out.sub_ext('.txt'), doc.text
+          tgz.add_entry out.sub_ext('.ann'), doc.brat_ann
+        end
+        searcher.run
+      end.to_s
+    end
+
+    get '/dataset/:dataset/progress' do |dataset|
+      get_dataset_dir(dataset) # for ensure_sandboxed
+      progress_file = get_progress_file(dataset, session[:session_id])
+      content_type 'application/x-yaml'
+      attachment dataset + ".yaml"
+      File.read(progress_file)
+    end
+
+    COLUMNS = [:independent, :decoration, :object, :metainfo]
+    post '/dataset/:dataset/step' do |dataset|
+      get_dataset_dir(dataset) # for ensure_sandboxed
+      progress_file = get_progress_file(dataset, session[:session_id])
+      progress_data = get_progress_data(progress_file)
+      changes = JSON.parse(params[:changes])
+      changes.each do |change|
+        pos = change["pos"].to_i
+        selector = change["selector"]
+        column = change["column"]
+        previous = change["previous"]
+        md = /^([^\]\[]+)(?:\[([^:]*)(?::\s*([^\]]*))?\])?/.match(selector)
+        halt 403, "Invalid selector #{selector}" unless md
+        _, tag, attr, values = *md
+        data = [tag, attr, *(values || "").split].compact
+
+        if previous && !previous.empty?
+          previous = previous.to_sym
+          halt 403, "Invalid origin column #{previous}" unless COLUMNS.include?(previous)
+          deleted = progress_data[:tags][previous].delete(data)
+          progress_data[:processed_files] = [] if deleted
+        end
+
+        if column && !column.empty?
+          column = column.to_sym
+          halt 403, "Invalid target column #{column}" unless COLUMNS.include?(column)
+          if pos == -1
+            progress_data[:tags][column] << data
+          else
+            progress_data[:tags][column].insert(pos, data)
+          end
+        end
+      end
+      save_progress_file(progress_file, progress_data)
+      ""
+    end
+
+    post '/config' do
+      session[:autosubmit] = params[:autosubmit] == "true" if params[:autosumbit]
+      session[:doc_limit] = params[:doc_limit].to_i if params[:doc_limit]
+      ""
     end
   end
 end

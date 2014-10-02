@@ -54,10 +54,14 @@ module PaperVu
       def initialize(str, opts={})
         str = HTMLEntityMap.replace(str)
         @opts = opts
-        @document = Nokogiri::XML(str, nil, 'UTF-8')
+        @document =
+          if @opts[:read_as_html]
+            Nokogiri::HTML(str, nil, 'UTF-8')
+          else
+            Nokogiri::XML(str, nil, 'UTF-8')
+          end
         if @opts[:use_xpath]
           @namespaces = @document.collect_namespaces
-          @namespaces['xmlns:default'] = @namespaces['xmlns']
         else
           @document.remove_namespaces!
           @namespaces = nil
@@ -69,15 +73,47 @@ module PaperVu
         @brat_ann = []
         @ann_count = 0
         collect_notable_elements
+        replace_cdata!
 
         remove_whitespace!(@document.root) if @opts[:remove_whitespace]
         note_replacements!(@document.root)
         displacement_text = note_displacements!
-        @enriched_xml = @document.root.to_xml.
+        save_format_option = @opts[:write_as_xhtml] ?
+          Nokogiri::XML::Node::SaveOptions::AS_XHTML :
+          Nokogiri::XML::Node::SaveOptions::AS_XML
+        if @opts[:deactivate_scripts]
+          enriched_doc = @document.clone
+          enriched_doc.css('script').each do |node|
+            type = node['type']
+            if !type
+              node['type'] = "application/#{PREFIX}DEFAULT"
+            elsif (match = %r{^(text|application)/(x-)?(javascript)$}i.match(type))
+              node['type'] = "#{match[1]}/#{match[2]}#{PREFIX}#{match[3]}"
+            end
+            language = node['language']
+            if language && 'javascript' == language.downcase
+              node['language'] = PREFIX + language
+            end
+          end
+          enriched_doc.css('noscript').each do |node|
+            content = node.to_xhtml
+            content.gsub!(/<!--(.*?)-->/, "<!-#{PREFIX}$1-#{PREFIX}>")
+            node.replace("<!--#{PREFIX}#{content}-->")
+          end
+        else
+          enriched_doc = @document
+        end
+        @enriched_xml = enriched_doc.root.to_xml(:save_with => save_format_option | Nokogiri::XML::Node::SaveOptions::NO_DECLARATION).
           # Apparently a bug in Nokogiri makes this necessary:
           gsub(%r{(xmlns="http://www\.w3\.org/1999/xhtml") \1}, "\\1")
         replace!
-        @text = @document.root.content + displacement_text
+        @text =
+          if @document.root
+            @document.root.content + displacement_text
+          else
+            displacement_text
+          end
+        @brat_ann = @brat_ann.join("\n")
       end
 
       def select_elements(selectors)
@@ -98,6 +134,13 @@ module PaperVu
         @newline = select_elements(@opts[:newline])
       end
 
+      def replace_cdata!
+        @document.search('//*/text()').select(&:cdata?).each do |cdata|
+          text = @document.create_text_node(cdata.text)
+          cdata.replace(text)
+        end
+      end
+
       def remove_whitespace!(node=@document)
         if node.text?
           text = node.content
@@ -115,7 +158,11 @@ module PaperVu
 
           # remove newlines from inside the string
           if replace_newlines = @opts[:replace_newlines]
-            text.gsub!(/(?<=\S)\u00ad?\n(?=\S)/, replace_newlines)
+            if @opts[:replace_all_newlines]
+              text.gsub!(/\u00ad?\n/, replace_newlines)
+            else
+              text.gsub!(/(?<=\S)\u00ad?\n(?=\S)/, replace_newlines)
+            end
           end
 
           # trim the element is at the start/end of a tag
@@ -134,6 +181,8 @@ module PaperVu
       end
 
       def note_replacements!(node=@document, displacement_name=nil)
+        return if node.comment?
+
         if node.text?
           @offset += node.text.length
         else
@@ -195,8 +244,11 @@ module PaperVu
             end
 
             attributes = node.attributes.inject({}) { |h, t| h[t[0]] = t[1].to_s; h }
+            namespaced_name = node.namespace ?
+              "#{node.namespace.prefix || 'xmlns'}:#{node.name}" :
+              node.name
             @unknown_standoffs[node] =
-                Standoff.new(@unknown_standoffs[node], @offset, node.name, attributes, @opts[:file_name], displacement_name)
+                Standoff.new(@unknown_standoffs[node], @offset, namespaced_name, attributes, @opts[:file_name], displacement_name)
           end
         end
       end
@@ -205,8 +257,8 @@ module PaperVu
         @displacements.map do |displacement_name, displaced_data|
           displaced_node, displaced_offset = *displaced_data
           displaced_text = displaced_node.text
-          displacement_mod_name = displacement_name.sub('IND', 'IND_TEXT')[1..-2]
-          displaced_header = "\n\n\n#{displacement_mod_name}: "
+          displacement_mod_name = @opts[:mark_displacement] ? displacement_name.sub('IND', 'IND_TEXT')[1..-2] + ":\n" : ''
+          displaced_header = "\n\n\n#{displacement_mod_name}"
           displaced_text_all = displaced_header + displaced_text
           displaced_data[2] = @offset + displaced_header.length - displaced_offset
           displaced_node["#{PREFIX}d"] = "#{@offset + displaced_header.length},#{@offset + displaced_text_all.length}"
