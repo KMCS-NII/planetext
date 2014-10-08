@@ -19,9 +19,9 @@ module PlaneText
 
   option_parser = OptionParser.new do |opts|
     planetext = File.basename($0)
-    opts.banner = "Usage: #{planetext} [options] <config.yaml> <files...>" # TODO
+    opts.banner = "Usage: #{planetext} [options] <tags.yaml> <files...>" # TODO
     opts.separator ""
-    
+
     opts.on('-h', '--help', 'Display this help') do
       puts opts
       exit

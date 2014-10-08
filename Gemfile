@@ -11,6 +11,8 @@ gem "minitar"
 group :development do
   gem "sass"
   gem "coffee-script"
+  gem "guard"
+  gem "guard-bundler"
   gem "guard-rack"
   gem "guard-compass"
   gem "guard-coffeescript"
