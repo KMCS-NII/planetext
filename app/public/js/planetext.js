@@ -540,7 +540,7 @@
       });
       $('#autosubmit').on('change', function(evt) {
         autosubmit = $(evt.target).prop('checked');
-        if (!autosubmit) {
+        if (autosubmit) {
           submit_changes();
         }
         $('#submit').prop('disabled', autosubmit);

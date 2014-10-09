@@ -190,7 +190,7 @@ module PlaneText
     end
 
     post '/config' do
-      session[:autosubmit] = params[:autosubmit] == "true" if params[:autosumbit]
+      session[:autosubmit] = params[:autosubmit] == "true" if params[:autosubmit]
       session[:doc_limit] = params[:doc_limit].to_i if params[:doc_limit]
       ""
     end

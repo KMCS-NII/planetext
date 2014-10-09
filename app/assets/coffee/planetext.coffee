@@ -413,7 +413,7 @@ define [
       return false
     $('#autosubmit').on 'change', (evt) ->
       autosubmit = $(evt.target).prop('checked')
-      submit_changes() unless autosubmit
+      submit_changes() if autosubmit
       $('#submit').prop('disabled', autosubmit)
       $.post(app_url + '/config', { autosubmit: autosubmit })
     $('#doc_limit_form').on 'submit', (evt) ->
