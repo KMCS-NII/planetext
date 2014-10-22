@@ -43,11 +43,18 @@ module PlaneText
       }
     end
 
-    # TODO upload
+    put '/new/:dataset' do |dataset|
+      halt 403 unless Config.webapp.editing
+      dataset_dir = File.join(Config.datadir, dataset)
+      ensure_sandboxed(dataset_dir, Config.datadir)
+      FileUtils.mkdir(dataset_dir)
+    end
 
     delete '/dataset/:dataset' do |dataset|
-      ensure_sandboxed(dataset, Config.datadir)
-      FileUtils.rm_rf(dataset)
+      halt 403 unless Config.webapp.editing
+      dataset_dir = File.join(Config.datadir, dataset)
+      ensure_sandboxed(dataset_dir, Config.datadir)
+      FileUtils.rm_rf(dataset_dir)
     end
 
 
@@ -124,6 +131,24 @@ module PlaneText
       rescue Errno::ENOENT
         halt 404, 'Not found'
       end
+    end
+
+    post '/dataset/:dataset/upload' do |dataset|
+      halt 403 unless Config.webapp.editing
+      dataset_dir = get_dataset_dir(dataset)
+      files = {}
+      params.each do |key, file|
+        next unless file.instance_of?(Hash)
+        file_name = File.join(dataset_dir, file[:filename])
+        ensure_sandboxed(file_name, dataset_dir)
+        files[file_name] =file
+      end
+
+      files.each do |file_name, file|
+        FileUtils.mv(file[:tempfile], file_name)
+      end
+
+      ""
     end
 
     get '/dataset/:dataset/output' do |dataset|
