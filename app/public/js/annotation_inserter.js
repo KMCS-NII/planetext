@@ -155,7 +155,7 @@
       };
 
       AnnotationInserter.prototype.drill_into_daughter_for = function(standoff, extent, node, side, bottom) {
-        var ann, child, child_count, child_index, child_node, child_pos, daughter_index, indices, inside, left_daughter_index, pos, text, wrap_node, _i, _j, _ref, _ref1, _ref2, _ref3, _ref4;
+        var ann, child, child_count, child_index, child_node, child_pos, daughter_index, indices, inside, left_daughter_index, pos, real_child_index, text, wrap_node, _i, _j, _ref, _ref1, _ref2, _ref3, _ref4;
         pos = node[Constants.PROPERTY];
         if (node.nodeType === node.TEXT_NODE) {
           ann = {
@@ -166,7 +166,7 @@
             return;
           }
           if (ann.b !== pos.b) {
-            text = unicode_substring(node.textContent, ann.b - pos.b);
+            text = unicode_substring(node.textContent, 0, ann.b - pos.b);
             child_node = document.createTextNode(text);
             child_node[Constants.PROPERTY] = {
               b: pos.b,
@@ -195,12 +195,13 @@
           daughter_index = null;
           child_count = node.childNodes.length;
           for (child_index = _i = 0; 0 <= child_count ? _i < child_count : _i > child_count; child_index = 0 <= child_count ? ++_i : --_i) {
-            child = node.childNodes[child_index];
+            real_child_index = side ? child_index : child_count - child_index - 1;
+            child = node.childNodes[real_child_index];
             child_pos = child[Constants.PROPERTY];
             inside = side ? (child_pos.b < (_ref = extent[1]) && _ref <= child_pos.e) : (child_pos.b <= (_ref1 = extent[0]) && _ref1 < child_pos.e);
             if (inside) {
               this.drill_into_daughter_for(standoff, extent, child, side);
-              daughter_index = child_index;
+              daughter_index = real_child_index;
               break;
             }
           }
@@ -213,7 +214,7 @@
               e: daughter_index
             } : {
               b: daughter_index + 1,
-              e: child_count
+              e: node.childNodes.length
             };
             return this.wrap_nodes(standoff, node, indices);
           }
