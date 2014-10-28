@@ -18,12 +18,12 @@ $ ->
       if evt.keyCode == 13
         name = $(this).val()
         $.ajax
-          url: "new/#{name}"
+          url: "#{app_url}/new/#{name}"
           type: 'put'
           data:
             name: name
           success: ->
-            $a = $('<a class="dataset">').text(name).attr('href', "/dataset/#{name}")
+            $a = $('<a class="dataset">').text(name).attr('href', "#{app_url}/dataset/#{name}")
             $i = $('<input class="delete-dataset" type="button" value="Delete">').appendTo($a)
             $('.new-dataset').val('').before($a)
 
@@ -45,7 +45,7 @@ $ ->
 
       # perform upload
       $.ajax
-        url: "dataset/#{dataset}/upload"
+        url: "#{app_url}/dataset/#{dataset}/upload"
         data: form
         type: "POST"
         contentType: false

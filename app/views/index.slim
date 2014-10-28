@@ -3,7 +3,9 @@ html
   head
     title PlaneText
     script(src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js")
-    script(src="js/index.js")
+    javascript:
+      window.jQuery || document.write('<script src="#{url('js/lib/jquery.min.js')}">\x3C/script>')
+    script(src="#{app_url}/js/index.js")
     css:
       a.dataset, div.new-dataset {
         display: block;
@@ -30,11 +32,12 @@ html
         background: #ff9999;
       }
     javascript:
-      var editing = #{!!PlaneText::Config.webapp.editing};
+      var editing = #{{!!PlaneText::Config.webapp.editing}};
+      var app_url = #{{JSON.dump(app_url)}};
   body
     #datasets
       - datasets.each do |dataset|
-        a.dataset(href=url("/dataset/#{dataset}") rel=dataset)
+        a.dataset(href=url("#{app_url}/dataset/#{dataset}") rel=dataset)
           = dataset
           - if PlaneText::Config.webapp.editing
             input.delete-dataset(type="button" value="Delete")

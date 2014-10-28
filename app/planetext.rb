@@ -39,7 +39,8 @@ module PlaneText
       datasets = Dir[File.join(Config.datadir, '*')].
         map { |file| File.basename(file) }
       slim :index, locals: {
-        datasets: datasets
+        datasets: datasets,
+        app_url: url("/")
       }
     end
 

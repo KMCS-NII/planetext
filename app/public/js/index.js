@@ -25,14 +25,14 @@
         if (evt.keyCode === 13) {
           name = $(this).val();
           return $.ajax({
-            url: "new/" + name,
+            url: "" + app_url + "/new/" + name,
             type: 'put',
             data: {
               name: name
             },
             success: function() {
               var $a, $i;
-              $a = $('<a class="dataset">').text(name).attr('href', "/dataset/" + name);
+              $a = $('<a class="dataset">').text(name).attr('href', "" + app_url + "/dataset/" + name);
               $i = $('<input class="delete-dataset" type="button" value="Delete">').appendTo($a);
               return $('.new-dataset').val('').before($a);
             }
@@ -66,7 +66,7 @@
           return;
         }
         return $.ajax({
-          url: "dataset/" + dataset + "/upload",
+          url: "" + app_url + "/dataset/" + dataset + "/upload",
           data: form,
           type: "POST",
           contentType: false,
