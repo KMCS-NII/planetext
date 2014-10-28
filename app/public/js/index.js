@@ -32,7 +32,7 @@
             },
             success: function() {
               var $a, $i;
-              $a = $('<a class="dataset">').text(name).attr('href', "" + app_url + "/dataset/" + name);
+              $a = $('<a class="dataset">').text(name).attr('href', "" + app_url + "/dataset/" + name).attr('rel', name);
               $i = $('<input class="delete-dataset" type="button" value="Delete">').appendTo($a);
               return $('.new-dataset').val('').before($a);
             }

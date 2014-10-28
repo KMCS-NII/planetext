@@ -23,7 +23,9 @@ $ ->
           data:
             name: name
           success: ->
-            $a = $('<a class="dataset">').text(name).attr('href', "#{app_url}/dataset/#{name}")
+            $a = $('<a class="dataset">').text(name).
+                attr('href', "#{app_url}/dataset/#{name}").
+                attr('rel', name)
             $i = $('<input class="delete-dataset" type="button" value="Delete">').appendTo($a)
             $('.new-dataset').val('').before($a)
 
