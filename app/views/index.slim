@@ -46,8 +46,8 @@ html
       - datasets.each do |dataset|
         a.dataset(href=url("#{app_url}/dataset/#{dataset}") rel=dataset)
           = dataset
-          - if editing
+          - if authorized?
             input.delete-dataset(type="button" value="Delete")
-      - if editing
+      - if authorized?
         div.new-dataset
           input#new-dataset-name(placeholder="New dataset name")

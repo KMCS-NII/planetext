@@ -7,7 +7,6 @@ require 'fileutils'
 require 'set'
 require 'rack-flash'
 require 'warden'
-require 'pry'
 
 module PlaneText
 
@@ -67,18 +66,17 @@ module PlaneText
     post '/login' do
       authorize!
       flash[:success] = 'Successfully logged in'
-      redirect session[:return_to]
+      redirect url('/')
     end
     get '/logout' do
       env['warden'].logout
       flash[:success] = 'Successfully logged out'
-      redirect '/'
+      redirect url('/')
     end
     post '/unauthenticated' do
       flash[:username] = params[:username]
-      session[:return_to] = env['warden.options'][:attempted_path]
       flash[:error] = 'Could not authenticate'
-      redirect to '/login'
+      redirect to url('/login')
     end
 
 
