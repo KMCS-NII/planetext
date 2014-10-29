@@ -64,6 +64,8 @@ GEM
       method_source (~> 0.8.1)
       slop (~> 3.4)
     rack (1.5.2)
+    rack-flash3 (1.0.5)
+      rack
     rack-protection (1.5.3)
       rack
     rb-fchange (0.0.6)
@@ -90,6 +92,8 @@ GEM
     tilt (1.4.1)
     timers (4.0.1)
       hitimes
+    warden (1.2.3)
+      rack (>= 1.0)
 
 PLATFORMS
   ruby
@@ -104,6 +108,7 @@ DEPENDENCIES
   minitar
   nokogiri
   rack
+  rack-flash3
   rb-fchange
   rb-fsevent
   sass
@@ -111,3 +116,4 @@ DEPENDENCIES
   sinatra
   sinatra-flash
   slim
+  warden

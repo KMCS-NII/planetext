@@ -31,16 +31,23 @@ html
       a.dataset.failure {
         background: #ff9999;
       }
+      a.auth {
+        float: right;
+      }
     javascript:
-      var editing = #{{!!PlaneText::Config.webapp.editing}};
+      var editing = #{{!!editing}};
       var app_url = #{{JSON.dump(app_url)}};
   body
+    - if authorized?
+      a class="auth" href="#{url '/logout'}" Logout
+    - else
+      a class="auth" href="#{url '/login'}" Login
     #datasets
       - datasets.each do |dataset|
         a.dataset(href=url("#{app_url}/dataset/#{dataset}") rel=dataset)
           = dataset
-          - if PlaneText::Config.webapp.editing
+          - if editing
             input.delete-dataset(type="button" value="Delete")
-      - if PlaneText::Config.webapp.editing
+      - if editing
         div.new-dataset
           input#new-dataset-name(placeholder="New dataset name")

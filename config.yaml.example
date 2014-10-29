@@ -2,3 +2,5 @@ mark_displacement: false
 webapp:
   session_secret: secret
   editing: false
+  users:
+    # user: password

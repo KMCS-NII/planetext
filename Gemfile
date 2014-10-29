@@ -7,6 +7,8 @@ gem "nokogiri"
 gem "sinatra-flash"
 gem "settingslogic"
 gem "minitar"
+gem "warden"
+gem "rack-flash3"
 
 group :development do
   gem "sass"
