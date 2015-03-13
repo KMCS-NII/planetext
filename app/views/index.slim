@@ -4,33 +4,50 @@ html
     title PlaneText
     script(src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js")
     javascript:
-      $(function() {
-        $('.delete-dataset').click(function() {
-          var $link = $(this).closest('tr').find('a');
-          var href = $link.attr('href');
-          var name = $link.text();
-          var name2 = prompt('Please type in "' + name + '" to confirm deletion:');
-          if (name == name2) {
-            $.ajax({
-              url: href,
-              type: 'delete',
-              success: function() {
-                $link.closest('tr').remove();
-              }
-            });
-          }
-        });
-      })
+      window.jQuery || document.write('<script src="#{url('js/lib/jquery.min.js')}">\x3C/script>')
+    script(src="#{app_url}/js/index.js")
+    css:
+      a.dataset, div.new-dataset {
+        display: block;
+        height: 20px;
+        width: 300px;
+        background: #cccccc;
+        padding: 2px 10px;
+        margin-bottom: 2px;
+      }
+      input.delete-dataset {
+        float: right;
+      }
+      #new-dataset-name {
+        box-sizing: border-box;
+        width: 100%;
+      }
+      a.dataset.dragover {
+        background: #dddddd;
+      }
+      a.dataset.success {
+        background: #99ff99;
+      }
+      a.dataset.failure {
+        background: #ff9999;
+      }
+      a.auth {
+        float: right;
+      }
+    javascript:
+      var editing = #{{!!editing}};
+      var app_url = #{{JSON.dump(app_url)}};
   body
-    table
-      //tr
-        td
-          input#new-dataset-name(placeholder="New dataset name")
-        td
-          input#new-dataset(type="file" value="upload")
+    - if authorized?
+      a class="auth" href="#{url '/logout'}" Logout
+    - else
+      a class="auth" href="#{url '/login'}" Login
+    #datasets
       - datasets.each do |dataset|
-        tr
-          td
-            a(href=url("/dataset/#{dataset}")) = dataset
-          td
+        a.dataset(href=url("#{app_url}/dataset/#{dataset}") rel=dataset)
+          = dataset
+          - if authorized?
             input.delete-dataset(type="button" value="Delete")
+      - if authorized?
+        div.new-dataset
+          input#new-dataset-name(placeholder="New dataset name")

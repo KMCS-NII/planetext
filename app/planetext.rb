@@ -5,11 +5,14 @@ require_relative '../lib/planetext'
 require 'slim'
 require 'fileutils'
 require 'set'
+require 'rack-flash'
+require 'warden'
 
 module PlaneText
 
   class App < Sinatra::Application
     include PlaneText::Common
+    Config['datadir'] ||= File.join(settings.root, 'data')
 
     set :haml, format: :html5
     set :method_override, true
@@ -24,7 +27,58 @@ module PlaneText
       set :clean_trace, true
     end
 
-    Config['datadir'] ||= File.join(settings.root, 'data')
+    use Rack::Flash
+    use Warden::Manager do |manager|
+      manager.default_strategies :password
+      manager.failure_app = self
+    end
+
+    Warden::Manager.before_failure do |env, opts|
+      env['REQUEST_METHOD'] = "POST"
+    end
+
+    Warden::Strategies.add(:password) do
+      def valid?
+        params["username"] || params["password"]
+      end
+    
+      def authenticate!
+        user = params["username"]
+        user = nil unless (users = Config.webapp.users) && (passwd = users[user]) && passwd == params["password"]
+        puts "LOGIIIIN #{user}, #{passwd}"
+        user.nil? ? fail!("Could not log in") : success!(user)
+      end
+    end
+
+    def authorize!
+      env['warden'].authenticate!
+    end
+    def authorized?
+      env['warden'].authenticated?
+    end
+    def ensure_authorized!
+      halt 403 unless authenticated?
+    end
+
+    get '/login' do
+      slim :login
+    end
+    post '/login' do
+      authorize!
+      flash[:success] = 'Successfully logged in'
+      redirect url('/')
+    end
+    get '/logout' do
+      env['warden'].logout
+      flash[:success] = 'Successfully logged out'
+      redirect url('/')
+    end
+    post '/unauthenticated' do
+      flash[:username] = params[:username]
+      flash[:error] = 'Could not authenticate'
+      redirect to url('/login')
+    end
+
 
     def ensure_sandboxed(subdir, dir)
       abs_subdir = File.expand_path(subdir)
@@ -39,15 +93,27 @@ module PlaneText
       datasets = Dir[File.join(Config.datadir, '*')].
         map { |file| File.basename(file) }
       slim :index, locals: {
-        datasets: datasets
+        datasets: datasets,
+        app_url: url("/"),
+        authorized: authorized?,
+        editing: Config.webapp.editing && authorized?
       }
     end
 
-    # TODO upload
+    put '/new/:dataset' do |dataset|
+      ensure_authorized!
+      halt 403 unless Config.webapp.editing
+      dataset_dir = File.join(Config.datadir, dataset)
+      ensure_sandboxed(dataset_dir, Config.datadir)
+      FileUtils.mkdir(dataset_dir)
+    end
 
     delete '/dataset/:dataset' do |dataset|
-      ensure_sandboxed(dataset, Config.datadir)
-      FileUtils.rm_rf(dataset)
+      ensure_authorized!
+      halt 403 unless Config.webapp.editing
+      dataset_dir = File.join(Config.datadir, dataset)
+      ensure_sandboxed(dataset_dir, Config.datadir)
+      FileUtils.rm_rf(dataset_dir)
     end
 
 
@@ -126,6 +192,25 @@ module PlaneText
       end
     end
 
+    post '/dataset/:dataset/upload' do |dataset|
+      ensure_authorized!
+      halt 403 unless Config.webapp.editing
+      dataset_dir = get_dataset_dir(dataset)
+      files = {}
+      params.each do |key, file|
+        next unless file.instance_of?(Hash)
+        file_name = File.join(dataset_dir, file[:filename])
+        ensure_sandboxed(file_name, dataset_dir)
+        files[file_name] =file
+      end
+
+      files.each do |file_name, file|
+        FileUtils.mv(file[:tempfile], file_name)
+      end
+
+      ""
+    end
+
     get '/dataset/:dataset/output' do |dataset|
       dataset_dir = get_dataset_dir(dataset)
       progress_file = get_progress_file(dataset, session[:session_id])
@@ -190,7 +275,7 @@ module PlaneText
     end
 
     post '/config' do
-      session[:autosubmit] = params[:autosubmit] == "true" if params[:autosumbit]
+      session[:autosubmit] = params[:autosubmit] == "true" if params[:autosubmit]
       session[:doc_limit] = params[:doc_limit].to_i if params[:doc_limit]
       ""
     end

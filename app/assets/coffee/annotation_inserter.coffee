@@ -116,7 +116,7 @@ define ['jquery', 'constants'], ($, Constants) ->
         return if ann.b == ann.e
 
         unless ann.b == pos.b
-          text = unicode_substring(node.textContent, ann.b - pos.b)
+          text = unicode_substring(node.textContent, 0, ann.b - pos.b)
           child_node = document.createTextNode(text)
           child_node[Constants.PROPERTY] =
             b: pos.b
@@ -144,16 +144,23 @@ define ['jquery', 'constants'], ($, Constants) ->
         daughter_index = null
         child_count = node.childNodes.length
         for child_index in [0...child_count]
-          child = node.childNodes[child_index]
+          real_child_index =
+            if side
+              child_index
+            else
+              child_count - child_index - 1
+          child = node.childNodes[real_child_index]
           child_pos = child[Constants.PROPERTY]
           inside =
             if side
+              # right side
               child_pos.b < extent[1] <= child_pos.e
             else
+              # left side
               child_pos.b <= extent[0] < child_pos.e
           if inside
             @drill_into_daughter_for(standoff, extent, child, side)
-            daughter_index = child_index
+            daughter_index = real_child_index
             break
         unless daughter_index?
           console.warn "Error: #{if side then 'right' else 'left'} standoff position #{extent[side]} is contained in the #{node.nodeName} at #{pos.b}-#{pos.e}, but is not in any of its children."
@@ -165,7 +172,7 @@ define ['jquery', 'constants'], ($, Constants) ->
               e: daughter_index
             else
               b: daughter_index + 1
-              e: child_count
+              e: node.childNodes.length
           @wrap_nodes(standoff, node, indices)
       else if pos.b == extent[0] and pos.e == extent[1] and
           node.getAttribute(Constants.REPLACEMENT_ATTRIBUTE)

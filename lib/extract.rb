@@ -8,7 +8,6 @@ require 'nokogiri'
 require 'optparse'
 require 'fileutils'
 require 'json'
-require 'pp' # DEBUG
 require_relative "html_entity_map"
 
 
@@ -72,8 +71,9 @@ module PaperVu
         @offset = 0
         @brat_ann = []
         @ann_count = 0
-        collect_notable_elements
         replace_cdata!
+        deactivate_scripts! if @opts[:deactivate_scripts]
+        collect_notable_elements
 
         remove_whitespace!(@document.root) if @opts[:remove_whitespace]
         note_replacements!(@document.root)
@@ -81,29 +81,7 @@ module PaperVu
         save_format_option = @opts[:write_as_xhtml] ?
           Nokogiri::XML::Node::SaveOptions::AS_XHTML :
           Nokogiri::XML::Node::SaveOptions::AS_XML
-        if @opts[:deactivate_scripts]
-          enriched_doc = @document.clone
-          enriched_doc.css('script').each do |node|
-            type = node['type']
-            if !type
-              node['type'] = "application/#{PREFIX}DEFAULT"
-            elsif (match = %r{^(text|application)/(x-)?(javascript)$}i.match(type))
-              node['type'] = "#{match[1]}/#{match[2]}#{PREFIX}#{match[3]}"
-            end
-            language = node['language']
-            if language && 'javascript' == language.downcase
-              node['language'] = PREFIX + language
-            end
-          end
-          enriched_doc.css('noscript').each do |node|
-            content = node.to_xhtml
-            content.gsub!(/<!--(.*?)-->/, "<!-#{PREFIX}$1-#{PREFIX}>")
-            node.replace("<!--#{PREFIX}#{content}-->")
-          end
-        else
-          enriched_doc = @document
-        end
-        @enriched_xml = enriched_doc.root.to_xml(:save_with => save_format_option | Nokogiri::XML::Node::SaveOptions::NO_DECLARATION).
+        @enriched_xml = @document.root.to_xml(:save_with => save_format_option | Nokogiri::XML::Node::SaveOptions::NO_DECLARATION).
           # Apparently a bug in Nokogiri makes this necessary:
           gsub(%r{(xmlns="http://www\.w3\.org/1999/xhtml") \1}, "\\1")
         replace!
@@ -132,6 +110,31 @@ module PaperVu
         @displaced = select_elements(@opts[:displaced])
         @ignored = select_elements(@opts[:ignored])
         @newline = select_elements(@opts[:newline])
+      end
+
+      def deactivate_scripts!
+        @document.css('script').each do |node|
+          if @opts[:read_as_html]
+            # HTML does not interpret entities inside script tags
+            # Possible false positives in strings :( XXX
+            node.inner_html = node.inner_html.gsub(/<!--(.*)-->/m, '\1')
+          end
+          type = node['type']
+          if !type
+            node['type'] = "application/#{PREFIX}DEFAULT"
+          elsif (match = %r{^(text|application)/(x-)?(javascript)$}i.match(type))
+            node['type'] = "#{match[1]}/#{match[2]}#{PREFIX}#{match[3]}"
+          end
+          language = node['language']
+          if language && 'javascript' == language.downcase
+            node['language'] = PREFIX + language
+          end
+        end
+        @document.css('noscript').each do |node|
+          content = node.to_xhtml
+          content.gsub!(/<!--(.*?)-->/, "<!-#{PREFIX}$1-#{PREFIX}>")
+          node.replace("<!--#{PREFIX}#{content}-->")
+        end
       end
 
       def replace_cdata!

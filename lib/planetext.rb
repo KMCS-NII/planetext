@@ -125,7 +125,8 @@ module PlaneText
         opts = {
           file_name: xml_file_name,
           read_as_html: read_as_html,
-          write_as_xhtml: write_as_xhtml
+          write_as_xhtml: write_as_xhtml,
+          deactivate_scripts: write_as_xhtml
         }.merge(@selectors)
 
         doc = extract(xml, opts)
