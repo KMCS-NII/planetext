@@ -129,9 +129,9 @@ module PlaneText
     searcher.per_doc do |xml_file, doc|
       out = output_path + Pathname.new(xml_file).relative_path_from(input_path)
 
-      File.open(out, 'w') do |f|
-        f.write(doc.enriched_xml)
-      end
+      #File.open(out, 'w') do |f|
+      #  f.write(doc.enriched_xml)
+      #end
 
       File.open(out.sub_ext('.txt'), 'w') do |f|
         f.write(doc.text)

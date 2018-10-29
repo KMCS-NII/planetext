@@ -224,7 +224,11 @@ module PaperVu
             if create_ann
               @ann_count += 1
               @brat_ann << "T#{@ann_count}\t#{name} #{@offset} #{replacement_end}\t#{replacement}"
-              text = node.text.gsub(/\n/, ' ')
+              if ["math", "abbr", "cite"].include? name
+                text = node.to_s.gsub(/\n/, ' ')
+              else
+                text = node.text.gsub(/\n/, ' ')
+              end
               @brat_ann << "##{@ann_count}\tAnnotatorNotes T#{@ann_count}\t#{text}"
             end
 

@@ -1,0 +1,54 @@
+---
+:tags:
+  :independent: []
+  :decoration:
+  - html
+  - head
+  - body
+  - section
+  - div
+  - p
+  - article
+  - br
+  - blockquote
+  - ol
+  - li
+  - dl
+  - dt
+  - dd
+  - a
+  - sup
+  - sub
+  - span
+  - del
+  - ins
+  :object:
+  - math
+  - h1
+  - h2
+  - h3
+  - h4
+  - h5
+  - h6
+  - abbr
+  - cite
+  - ul[@class="ltx_biblist"]
+  :metainfo:
+  - meta
+  - footer
+  - div[@class="ltx_authors"]
+  - div[@class="ltx_keywords"]
+  - div[@class="ltx_classification"]
+  - div[@class="ltx_date ltx_role_creation"]
+  - figure
+  - table
+  - img
+  - svg
+  - section[@class="ltx_bibliography"]
+  - section[@class="ltx_appendix"]
+  - title
+  - ul
+  - pre
+  - code
+  - style
+  - object
