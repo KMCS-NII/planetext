@@ -5,7 +5,7 @@ require 'zlib'
 require 'concurrent'
 require_relative 'extract'
 
-NUM_OF_FILES = 137864
+NUM_OF_FILES = 705095
 
 module PlaneText
 
@@ -33,7 +33,7 @@ module PlaneText
         use_xpath: true,
         opaque_unknowns: true,
         newline: [],
-        mark_displacement: false
+        mark_displacement: true
       }.merge(conf)
       PaperVu::Extract::Document.new(doc, conf)
     end
@@ -84,6 +84,35 @@ module PlaneText
       end
     end
 
+    def print_status(num_of_files, proc_files, start_time, last=false)
+      time = (Time.now.to_f - start_time)
+      current_process = 100*proc_files/num_of_files
+      pattern = "Processed %3d%% [%-50s] %06d/%06d %02d:%02d:%02d"
+      unless last
+        pattern = pattern + "\r"
+      else
+        pattern = pattern + "\n"
+      end
+      printf(
+        pattern,
+        current_process,
+        "=" * (current_process/2),
+        proc_files,
+        num_of_files,
+        (time/3600),
+        (time/60)%60,
+        time%60
+      )
+    end
+
+    def interpreter_check()
+      ruby_interpreter = Pathname.new(RbConfig.ruby).basename
+      unless ruby_interpreter.to_s == 'jruby'
+        puts "\033[0;33m[WARNING] It seems you use '#{ruby_interpreter}' as the interpreter.
+          It is not clear if this interpreter really supports parallelism or just concurrency.
+          We recommend using JRuby as the interepreter which allows parallel programming.\033[0m\n"
+      end
+    end
   end
 
   class UnknownSearcher
@@ -91,17 +120,13 @@ module PlaneText
     using HashRefinement
 
     attr_reader :selectors, :unknown_standoffs, :done, :total
-    def initialize(dataset_dir, progress_file, limit=1)
+    def initialize(dataset_dir, progress_file, recursive, max_threads, limit=1)
       @dataset_dir = dataset_dir
       @progress_file = progress_file
+      @recursive = recursive
       @all = limit == :all
       @limit = (Integer === limit && limit > 0) ? limit : nil
-      @max_threads = Concurrent.processor_count # returns CPUs
-      if @max_threads <= 1
-        @max_threads = 1
-      else
-        puts "Initialize parallel working on #{@max_threads} threads."
-      end
+      @max_threads = [Concurrent.processor_count, max_threads].min
     end
 
     def per_doc(&block)
@@ -109,12 +134,27 @@ module PlaneText
     end
 
     def run
+      if @max_threads > 1
+        puts "Start processing with #{@max_threads} threads.\n"
+      end
+      interpreter_check
+
       progress_data = get_progress_data(@progress_file)
 
+      puts "Collecting files... "
       @unknown_standoffs = Concurrent::Array.new
       all_files = Dir.chdir(@dataset_dir) { |dir|
-        Dir['**/*.{xml,xhtml,html}']
+        if @recursive
+          Dir['**/*.{xml,xhtml,html}']
+        else
+          Dir['*.{xml,xhtml,html}']
+        end
       }
+      puts "done.\n"
+
+      num_of_files = all_files.length
+
+      puts "Start processing #{num_of_files} files."
 
       processed_files = @all && [] || progress_data[:processed_files] || all_files
       unprocessed_files = all_files - processed_files
@@ -136,16 +176,7 @@ module PlaneText
       current_process = 0
       start_time = Time.now.to_f
 
-      printf(
-        "Processed %3d%% [%-50s] %06d/%06d %02d:%02d:%02d \r",
-        0,
-        "",
-        proc_files,
-        NUM_OF_FILES,
-        0,
-        0,
-        0
-      )
+      print_status(num_of_files, proc_files, start_time)
 
       unprocessed_files.each do |xml_file_name|
         xml_file = File.absolute_path(xml_file_name, @dataset_dir)
@@ -161,6 +192,7 @@ module PlaneText
 
         thread_pool.post do
           doc = extract(xml, opts)
+
           @per_doc[xml_file, doc] if @per_doc # writes files
 
           # atomic operations are not thread safe
@@ -175,26 +207,16 @@ module PlaneText
           end
 
           proc_files += 1
-          current_process = 100*proc_files/NUM_OF_FILES
-          time = (Time.now.to_f - start_time)
-
-          printf(
-            "Processed %3d%% [%-50s] %06d/%06d %02d:%02d:%02d \r",
-            current_process,
-            "=" * (current_process/2),
-            proc_files,
-            NUM_OF_FILES,
-            (time/3600),
-            (time/60)%60,
-            time%60
-          )
+          print_status(num_of_files, proc_files, start_time)
         end
       end
 
       thread_pool.shutdown
       thread_pool.wait_for_termination
 
-      print "\nProcess terminate. Cleaning up...\n"
+      print_status(num_of_files, proc_files, start_time, true)
+
+      print "Process terminated. Cleaning up...\n"
 
       if processed_files_TS.length == all_files.length
         progress_data.delete(:processed_files)

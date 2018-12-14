@@ -12,10 +12,14 @@ module PlaneText
   class BadSelector < StandardError; end
   extend PlaneText::Common
 
+  print("Initializing...\n")
+
   changes = Hash.new { |h, k| h[k] = [] }
   output_dir = nil
   limit = 0
   verbose = false
+  recursive = false
+  max_threads = 1
 
   option_parser = OptionParser.new do |opts|
     planetext = File.basename($0)
@@ -25,6 +29,18 @@ module PlaneText
     opts.on('-h', '--help', 'Display this help') do
       puts opts
       exit
+    end
+
+    opts.on('-r', '--recursive', 'Parse input path file recursively') do
+      recursive = true
+    end
+
+    opts.on('-p', '--preserver-hierarchy', 'Preserve the directory hierarchy from the input directory (only makes sense if -r is set)') do
+      @preserve_hierarchy = true
+    end
+
+    opts.on('-e', '--enriched-xml', 'Create an enriched xml file per processed file') do
+      @enriched_xml = true
     end
 
     %i(independent decoration object metainfo).each do |column|
@@ -48,6 +64,14 @@ module PlaneText
       verbose = bool
     end
 
+    opts.on('-m', '--max-threads NUM', 'Activates a cap for parallel threads (the cap can\'t be higher than the processor count.)') do |num|
+      if num.to_i < 1
+        puts "Tried to break the program? Nice try... (set a threads cap higher or equal to 1)"
+        exit
+      end
+      max_threads = num.to_i
+    end
+
     opts.separator ''
     opts.separator 'Selector format: ROW:NAMESPACE:TAG[ATTRIBUTE: WORD1 WORD2...]'
     opts.separator 'Everything except TAG is optional; ROW defaults to last row'
@@ -68,7 +92,7 @@ module PlaneText
 
   if output_dir
     unless File.exist?(output_dir)
-      FileUtils.cp_r(input_dir, output_dir)
+      FileUtils.mkdir_p(output_dir)
     end
   end
 
@@ -117,31 +141,38 @@ module PlaneText
   end
 
   limit = :all if output_dir
-  searcher = UnknownSearcher.new(input_dir, progress_file, limit)
-  if output_dir
-    unless File.exist?(output_dir)
-      FileUtils.cp_r(input_dir, output_dir)
+  searcher = UnknownSearcher.new(input_dir, progress_file, recursive, max_threads, limit)
+
+  input_path = Pathname.new(input_dir).realpath
+  output_path = Pathname.new(output_dir).realpath
+
+  searcher.per_doc do |xml_file, doc|
+    filepath = Pathname.new(xml_file).relative_path_from(input_path)
+    out = output_path
+    if @preserve_hierarchy
+      unless File.directory?(out + filepath.parent)
+        FileUtils.mkdir_p(out + filepath.parent)
+      end
+      out = out + filepath
+    else
+      out = out + filepath.basename
     end
 
-    input_path = Pathname.new(input_dir).realpath
-    output_path = Pathname.new(output_dir).realpath
-
-    searcher.per_doc do |xml_file, doc|
-      out = output_path + Pathname.new(xml_file).relative_path_from(input_path)
-
-      #File.open(out, 'w') do |f|
-      #  f.write(doc.enriched_xml)
-      #end
-
-      File.open(out.sub_ext('.txt'), 'w') do |f|
-        f.write(doc.text)
+    if @enriched_xml
+      File.open(out, 'w') do |f|
+        f.write(doc.enriched_xml)
       end
+    end
 
-      File.open(out.sub_ext('.ann'), 'w') do |f|
-        f.puts(doc.brat_ann)
-      end
+    File.open(out.sub_ext('.txt'), 'w') do |f|
+      f.write(doc.text)
+    end
+
+    File.open(out.sub_ext('.ann'), 'w') do |f|
+      f.puts(doc.brat_ann)
     end
   end
+
   searcher.run
 
   searcher.unknown_standoffs.each do |standoff|
