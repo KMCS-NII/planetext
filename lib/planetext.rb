@@ -5,8 +5,6 @@ require 'zlib'
 require 'concurrent'
 require_relative 'extract'
 
-NUM_OF_FILES = 705095
-
 module PlaneText
 
   module HashRefinement

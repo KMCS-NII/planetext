@@ -236,6 +236,7 @@ module PaperVu
             if create_ann
               @ann_count += 1
               @brat_ann << "T#{@ann_count}\t#{name} #{@offset} #{replacement_end}\t#{replacement}"
+              # TODO: make this list for to_s.gsub controlable via config yaml
               if ["math", "abbr", "cite", "ul"].include? name
                 text = node.to_s.gsub(/\n/, ' ')
               else
