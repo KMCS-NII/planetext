@@ -2,6 +2,7 @@ require 'yaml'
 require 'settingslogic'
 require 'archive/tar/minitar'
 require 'zlib'
+require 'concurrent'
 require_relative 'extract'
 
 module PlaneText
@@ -20,7 +21,6 @@ module PlaneText
     load!
   end
 
-
   module Common
 
     def extract(doc, conf={})
@@ -31,7 +31,7 @@ module PlaneText
         use_xpath: true,
         opaque_unknowns: true,
         newline: [],
-        mark_displacement: false
+        mark_displacement: true
       }.merge(conf)
       PaperVu::Extract::Document.new(doc, conf)
     end
@@ -82,6 +82,35 @@ module PlaneText
       end
     end
 
+    def print_status(num_of_files, proc_files, start_time, last=false)
+      time = (Time.now.to_f - start_time)
+      current_process = 100*proc_files/num_of_files
+      pattern = "Processed %3d%% [%-50s] %06d/%06d %02d:%02d:%02d"
+      unless last
+        pattern = pattern + "\r"
+      else
+        pattern = pattern + "\n"
+      end
+      printf(
+        pattern,
+        current_process,
+        "=" * (current_process/2),
+        proc_files,
+        num_of_files,
+        (time/3600),
+        (time/60)%60,
+        time%60
+      )
+    end
+
+    def interpreter_check()
+      ruby_interpreter = Pathname.new(RbConfig.ruby).basename
+      unless ruby_interpreter.to_s == 'jruby'
+        puts "\033[0;33m[WARNING] It seems you use '#{ruby_interpreter}' as the interpreter.
+          It is not clear if this interpreter really supports parallelism or just concurrency.
+          We recommend using JRuby as the interepreter which allows parallel programming.\033[0m\n"
+      end
+    end
   end
 
   class UnknownSearcher
@@ -89,11 +118,13 @@ module PlaneText
     using HashRefinement
 
     attr_reader :selectors, :unknown_standoffs, :done, :total
-    def initialize(dataset_dir, progress_file, limit=1)
+    def initialize(dataset_dir, progress_file, recursive, max_threads, limit=1)
       @dataset_dir = dataset_dir
       @progress_file = progress_file
+      @recursive = recursive
       @all = limit == :all
       @limit = (Integer === limit && limit > 0) ? limit : nil
+      @max_threads = [Concurrent.processor_count, max_threads].min
     end
 
     def per_doc(&block)
@@ -101,14 +132,33 @@ module PlaneText
     end
 
     def run
+      if @max_threads > 1
+        puts "Start processing with #{@max_threads} threads.\n"
+      end
+      interpreter_check
+
       progress_data = get_progress_data(@progress_file)
 
-      @unknown_standoffs = []
+      puts "Collecting files... "
+      @unknown_standoffs = Concurrent::Array.new
       all_files = Dir.chdir(@dataset_dir) { |dir|
-        Dir['**/*.{xml,xhtml,html}']
+        if @recursive
+          Dir['**/*.{xml,xhtml,html}']
+        else
+          Dir['*.{xml,xhtml,html}']
+        end
       }
+      puts "done.\n"
+
+      num_of_files = all_files.length
+
+      puts "Start processing #{num_of_files} files."
+
       processed_files = @all && [] || progress_data[:processed_files] || all_files
       unprocessed_files = all_files - processed_files
+
+      processed_files_TS = Concurrent::Array.new
+      processed_files_TS.concat(processed_files)
 
       @selectors = {
         displaced: to_xpath(progress_data[:tags][:independent]),
@@ -116,7 +166,16 @@ module PlaneText
         replaced: to_xpath(progress_data[:tags][:object]),
         removed: to_xpath(progress_data[:tags][:metainfo])
       }
+
+      thread_pool = Concurrent::FixedThreadPool.new(@max_threads)
+
       dirty_files = 0
+      proc_files = 0
+      current_process = 0
+      start_time = Time.now.to_f
+
+      print_status(num_of_files, proc_files, start_time)
+
       unprocessed_files.each do |xml_file_name|
         xml_file = File.absolute_path(xml_file_name, @dataset_dir)
         xml = File.read(xml_file)
@@ -129,21 +188,38 @@ module PlaneText
           deactivate_scripts: write_as_xhtml
         }.merge(@selectors)
 
-        doc = extract(xml, opts)
-        @per_doc[xml_file, doc] if @per_doc
+        thread_pool.post do
+          doc = extract(xml, opts)
 
-        @unknown_standoffs += doc.unknown_standoffs
-        if doc.unknown_standoffs.empty?
-          processed_files << xml_file_name
-        else
-          dirty_files += 1
-          break if @limit && dirty_files >= @limit
+          @per_doc[xml_file, doc] if @per_doc # writes files
+
+          # atomic operations are not thread safe
+          @unknown_standoffs += doc.unknown_standoffs
+          if doc.unknown_standoffs.empty?
+            # atomic operations are not thread safe
+            processed_files_TS << xml_file_name
+          else
+            dirty_files += 1
+            # stop limit functionality for simplicity in multi threading environment
+            #break if @limit && dirty_files >= @limit
+          end
+
+          proc_files += 1
+          print_status(num_of_files, proc_files, start_time)
         end
       end
-      if processed_files.length == all_files.length
+
+      thread_pool.shutdown
+      thread_pool.wait_for_termination
+
+      print_status(num_of_files, proc_files, start_time, true)
+
+      print "Process terminated. Cleaning up...\n"
+
+      if processed_files_TS.length == all_files.length
         progress_data.delete(:processed_files)
       else
-        progress_data[:processed_files] = processed_files
+        progress_data[:processed_files] = processed_files_TS
       end
       save_progress_file(@progress_file, progress_data) unless @all
 
@@ -154,7 +230,7 @@ module PlaneText
         [type, selector_texts]
       }
 
-      @done = processed_files.length
+      @done = processed_files_TS.length
       @total = all_files.length
       self
     end
