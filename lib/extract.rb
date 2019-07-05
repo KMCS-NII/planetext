@@ -78,6 +78,7 @@ module PaperVu
         @ann_count = 0
         replace_cdata!
         deactivate_scripts! if @opts[:deactivate_scripts]
+
         collect_notable_elements
 
         remove_whitespace!(@document.root) if @opts[:remove_whitespace]
@@ -115,6 +116,7 @@ module PaperVu
         @displaced = select_elements(@opts[:displaced])
         @ignored = select_elements(@opts[:ignored])
         @newline = select_elements(@opts[:newline])
+        @preserve = @opts[:preserve]
       end
 
       def deactivate_scripts!
@@ -236,10 +238,10 @@ module PaperVu
             if create_ann
               @ann_count += 1
               @brat_ann << "T#{@ann_count}\t#{name} #{@offset} #{replacement_end}\t#{replacement}"
-              # TODO: make this list for to_s.gsub controlable via config yaml
-              if ["math", "abbr", "cite", "ul"].include? name
+              # preserve the inner XML structure for replaced expressions if specified
+              if @preserve.include? name
                 text = node.to_s.gsub(/\n/, ' ')
-              else
+              else # otherwise just replace it by the inner text
                 text = node.text.gsub(/\n/, ' ')
               end
               @brat_ann << "##{@ann_count}\tAnnotatorNotes T#{@ann_count}\t#{text}"

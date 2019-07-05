@@ -45,6 +45,11 @@
   - abbr
   - cite
   - ul[@class="ltx_biblist"]
+  :preserveobject:
+  - math
+  - abbr
+  - cite
+  - ul
   :metainfo:
   - meta
   - footer
