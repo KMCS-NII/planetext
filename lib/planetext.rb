@@ -164,7 +164,8 @@ module PlaneText
         displaced: to_xpath(progress_data[:tags][:independent]),
         ignored: to_xpath(progress_data[:tags][:decoration]),
         replaced: to_xpath(progress_data[:tags][:object]),
-        removed: to_xpath(progress_data[:tags][:metainfo])
+        removed: to_xpath(progress_data[:tags][:metainfo]),
+        preserve: progress_data[:tags][:preserveobject]
       }
 
       thread_pool = Concurrent::FixedThreadPool.new(@max_threads)
